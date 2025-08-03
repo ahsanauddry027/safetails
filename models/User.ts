@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema(
     profileImage: { type: String },
     isActive: { type: Boolean, default: true },
     isBlocked: { type: Boolean, default: false },
-    blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     blockedAt: { type: Date },
     blockReason: { type: String },
   },
