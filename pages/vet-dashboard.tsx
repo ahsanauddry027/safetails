@@ -1,8 +1,9 @@
 // pages/vet-dashboard.tsx
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import axios from "axios";
 
 export default function VetDashboard() {
   const { user, loading } = useAuth();
@@ -13,6 +14,11 @@ export default function VetDashboard() {
     completedCases: 0,
     pendingConsultations: 0
   });
+  const [requests, setRequests] = useState([]);
+  const [nearbyPosts, setNearbyPosts] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [location, setLocation] = useState(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -22,17 +28,102 @@ export default function VetDashboard() {
     }
   }, [user, loading, router]);
 
-  // Mock data - in real app, this would come from API
+  // Function to fetch vet dashboard data
+  const fetchVetData = async () => {
+    setDataLoading(true);
+    setError("");
+    
+    try {
+      // Fetch vet requests
+      const response = await axios.get("/api/vet/requests");
+      
+      if (response.data) {
+        setRequests(response.data.requests || []);
+        setStats({
+          totalCases: response.data.stats?.total || 0,
+          activeCases: response.data.stats?.active || 0,
+          completedCases: response.data.stats?.completed || 0,
+          pendingConsultations: response.data.stats?.pending || 0
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching vet data:", err);
+      setError("Failed to load dashboard data. Please try again later.");
+    } finally {
+      setDataLoading(false);
+    }
+  };
+  
+  // Get user's current location
+  const getUserLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          // Set default location (can be a central location in the city)
+          setLocation({ lat: 40.7128, lng: -74.0060 }); // New York as default
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+      setLocation({ lat: 40.7128, lng: -74.0060 }); // New York as default
+    }
+  };
+  
+  // Fetch nearby pet posts
+  const fetchNearbyPosts = async () => {
+    try {
+      const response = await axios.get(`/api/posts/nearby?lng=${location.lng}&lat=${location.lat}&distance=10&postType=emergency,wounded`);
+      setNearbyPosts(response.data.posts || []);
+    } catch (err) {
+      console.error("Error fetching nearby posts:", err);
+    }
+  };
+
+  // Fetch vet data when component mounts and user is authenticated
   useEffect(() => {
-    if (user?.role === "vet") {
-      setStats({
-        totalCases: 24,
-        activeCases: 8,
-        completedCases: 16,
-        pendingConsultations: 3
-      });
+    if (user && user.role === "vet") {
+      fetchVetData();
+      getUserLocation();
     }
   }, [user]);
+  
+  // Fetch nearby posts when location is available
+  useEffect(() => {
+    if (location && user && user.role === "vet") {
+      fetchNearbyPosts();
+    }
+  }, [location]);
+  
+  // Function to handle accepting a request
+  const handleAcceptRequest = async (requestId) => {
+    try {
+      await axios.put(`/api/vet/requests/${requestId}`, { status: "accepted" });
+      // Refresh data after update
+      fetchVetData();
+    } catch (err) {
+      console.error("Error accepting request:", err);
+      setError("Failed to accept request. Please try again.");
+    }
+  };
+  
+  // Function to handle completing a request
+  const handleCompleteRequest = async (requestId) => {
+    try {
+      await axios.put(`/api/vet/requests/${requestId}`, { status: "completed" });
+      // Refresh data after update
+      fetchVetData();
+    } catch (err) {
+      console.error("Error completing request:", err);
+      setError("Failed to complete request. Please try again.");
+    }
+  };
 
   if (loading) {
     return (
@@ -44,6 +135,18 @@ export default function VetDashboard() {
 
   if (!user || user.role !== "vet") {
     return null;
+  }
+  
+  // Show loading state when fetching data
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -86,7 +189,7 @@ export default function VetDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Cases</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalCases}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.totalCases || 0}</p>
               </div>
             </div>
           </div>
@@ -100,7 +203,7 @@ export default function VetDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Active Cases</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.activeCases}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.activeCases || 0}</p>
               </div>
             </div>
           </div>
@@ -114,7 +217,7 @@ export default function VetDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.completedCases}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.completedCases || 0}</p>
               </div>
             </div>
           </div>
@@ -128,7 +231,7 @@ export default function VetDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.pendingConsultations}</p>
+                <p className="text-2xl font-semibold text-gray-900">{stats.pendingConsultations || 0}</p>
               </div>
             </div>
           </div>
@@ -139,60 +242,132 @@ export default function VetDashboard() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
             <div className="space-y-3">
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200">
-                View Active Cases
-              </button>
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition duration-200">
-                Schedule Consultation
-              </button>
-              <button className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md transition duration-200">
-                Emergency Cases
-              </button>
+              <Link href="/posts?postType=emergency" className="block w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center">
+                Emergency Pet Posts
+              </Link>
+              <Link href="/posts?postType=wounded" className="block w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center">
+                Wounded Pet Posts
+              </Link>
+              <Link href="/posts?postType=missing" className="block w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center">
+                Missing Pet Posts
+              </Link>
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Cases</h3>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+                {error}
+              </div>
+            )}
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                <div>
-                  <p className="font-medium text-gray-800">Golden Retriever - Injury</p>
-                  <p className="text-sm text-gray-600">Case #VT-2024-001</p>
+              {requests.length > 0 ? (
+                requests.slice(0, 5).map((request) => (
+                  <div key={request._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                    <div>
+                      <p className="font-medium text-gray-800">{request.petName} - {request.requestType}</p>
+                      <p className="text-sm text-gray-600">Case #{request._id.substring(0, 8)}</p>
+                      <p className="text-xs text-gray-500">{request.userId?.name || 'Unknown User'}</p>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className={`px-2 py-1 text-xs rounded-full ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : request.status === 'accepted' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                      </span>
+                      {request.status === 'pending' && (
+                        <button 
+                          onClick={() => handleAcceptRequest(request._id)}
+                          className="mt-2 text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
+                        >
+                          Accept
+                        </button>
+                      )}
+                      {request.status === 'accepted' && (
+                        <button 
+                          onClick={() => handleCompleteRequest(request._id)}
+                          className="mt-2 text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded"
+                        >
+                          Complete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-center py-4">No cases found</p>
+              )}
+              
+              {requests.length > 5 && (
+                <div className="text-center mt-4">
+                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    View All Cases
+                  </button>
                 </div>
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">Active</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                <div>
-                  <p className="font-medium text-gray-800">Persian Cat - Checkup</p>
-                  <p className="text-sm text-gray-600">Case #VT-2024-002</p>
-                </div>
-                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Completed</span>
-              </div>
+              )}
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Today's Schedule</h3>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-md">
-                <div>
-                  <p className="font-medium text-gray-800">10:00 AM</p>
-                  <p className="text-sm text-gray-600">Vaccination - Max (Labrador)</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-md">
-                <div>
-                  <p className="font-medium text-gray-800">2:30 PM</p>
-                  <p className="text-sm text-gray-600">Surgery - Bella (Persian)</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-md">
-                <div>
-                  <p className="font-medium text-gray-800">4:00 PM</p>
-                  <p className="text-sm text-gray-600">Emergency - Rocky (German Shepherd)</p>
-                </div>
-              </div>
+              {requests.filter(req => req.status === 'accepted').length > 0 ? (
+                requests
+                  .filter(req => req.status === 'accepted')
+                  .slice(0, 3)
+                  .map((request, index) => {
+                    // Generate a mock time for demonstration purposes
+                    const hours = 9 + index * 2;
+                    const time = `${hours}:00 ${hours >= 12 ? 'PM' : 'AM'}`;
+                    
+                    return (
+                      <div key={request._id} className="flex items-center justify-between p-3 bg-blue-50 rounded-md">
+                        <div>
+                          <p className="font-medium text-gray-800">{time}</p>
+                          <p className="text-sm text-gray-600">{request.requestType} - {request.petName}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+              ) : (
+                <p className="text-gray-500 text-center py-4">No scheduled appointments</p>
+              )}
             </div>
+          </div>
+          
+          {/* Nearby Emergency Posts */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Nearby Emergency Posts</h3>
+            {nearbyPosts && nearbyPosts.length > 0 ? (
+              <div className="space-y-4">
+                {nearbyPosts.slice(0, 3).map((post) => (
+                  <Link href={`/posts/${post._id}`} key={post._id}>
+                    <div className="p-3 border border-red-200 rounded-md hover:bg-red-50 transition-colors cursor-pointer">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center">
+                            <span className={`px-2 py-1 text-xs rounded-full ${post.postType === 'emergency' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'} mr-2`}>
+                              {post.postType.charAt(0).toUpperCase() + post.postType.slice(1)}
+                            </span>
+                            <p className="text-sm font-medium text-gray-900">{post.petName}</p>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">{post.description && post.description.substring(0, 60)}...</p>
+                          {post.location && post.location.address && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              <span className="font-medium">Location:</span> {post.location.address.substring(0, 30)}{post.location.address.length > 30 ? '...' : ''}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+                <Link href="/posts?postType=emergency,wounded" className="block text-center text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  View All Emergency Posts
+                </Link>
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-4">No nearby emergency posts found.</p>
+            )}
           </div>
         </div>
 
@@ -217,4 +392,4 @@ export default function VetDashboard() {
       </div>
     </div>
   );
-} 
+}

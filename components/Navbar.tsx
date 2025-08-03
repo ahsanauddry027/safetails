@@ -25,6 +25,11 @@ export default function Navbar() {
       </Link>
       
       <div className="flex gap-4 items-center">
+        {/* Common navigation links */}
+        <Link href="/posts" className="hover:text-yellow-300">
+          Pet Posts
+        </Link>
+        
         {user ? (
           <>
             {/* Role-specific navigation */}

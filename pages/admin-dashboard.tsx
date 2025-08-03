@@ -48,6 +48,15 @@ export default function AdminDashboard() {
     totalBlocked: 0,
     totalActive: 0
   });
+  
+  const [postStats, setPostStats] = useState({
+    total: 0,
+    missing: 0,
+    emergency: 0,
+    wounded: 0,
+    active: 0,
+    resolved: 0
+  });
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -76,6 +85,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (user?.role === "admin") {
       fetchUsers();
+      fetchPostStats();
     }
   }, [user]);
 
@@ -105,6 +115,39 @@ export default function AdminDashboard() {
     } finally {
       setLoadingUsers(false);
     }
+  };
+  
+  // Fetch post statistics
+  const fetchPostStats = async () => {
+    try {
+      const response = await axios.get("/api/admin/posts/stats");
+      setPostStats(response.data);
+    } catch (error) {
+      console.error("Error fetching post stats:", error);
+    }
+  };
+  
+  // Quick Actions Section to add to the dashboard
+  const renderQuickActions = () => {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Link href="/admin/posts" className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 text-center">
+            Manage Pet Posts
+          </Link>
+          <Link href="/posts" className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 text-center">
+            View All Posts
+          </Link>
+          <Link href="/posts?postType=emergency" className="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 text-center">
+            Emergency Posts
+          </Link>
+          <Link href="/posts?postType=missing" className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 text-center">
+            Missing Pet Posts
+          </Link>
+        </div>
+      </div>
+    );
   };
 
   const handleBlockUser = async (userId: string, isBlocked: boolean) => {
@@ -216,7 +259,8 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Stats Cards */}
+        {/* User Stats Cards */}
+        <h2 className="text-xl font-bold text-gray-800 mb-4">User Statistics</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">
@@ -288,6 +332,97 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+        
+        {/* Post Stats Cards */}
+        <h2 className="text-xl font-bold text-gray-800 mb-4">Pet Post Statistics</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-purple-100 rounded-full">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Posts</p>
+                <p className="text-2xl font-semibold text-gray-900">{postStats.total}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-red-100 rounded-full">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Missing Pets</p>
+                <p className="text-2xl font-semibold text-gray-900">{postStats.missing}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-orange-100 rounded-full">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Emergency</p>
+                <p className="text-2xl font-semibold text-gray-900">{postStats.emergency}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-pink-100 rounded-full">
+                <svg className="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Wounded</p>
+                <p className="text-2xl font-semibold text-gray-900">{postStats.wounded}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-yellow-100 rounded-full">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Active</p>
+                <p className="text-2xl font-semibold text-gray-900">{postStats.active}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-green-100 rounded-full">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Resolved</p>
+                <p className="text-2xl font-semibold text-gray-900">{postStats.resolved}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Quick Actions */}
+        {renderQuickActions()}
 
         {/* User Management Section */}
         <div className="bg-white rounded-lg shadow-md">
