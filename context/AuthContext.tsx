@@ -49,8 +49,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await axios.post("/api/auth/login", { email, password });
-    setUser(res.data.user);
+    try {
+      const res = await axios.post("/api/auth/login", { email, password });
+      setUser(res.data.user);
+    } catch (error) {
+      // Propagate the error to be handled by the login component
+      throw error;
+    }
   };
 
   const logout = async () => {

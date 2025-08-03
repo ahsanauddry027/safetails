@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import axios from "axios";
 import Notification from "@/components/Notification";
+import CreateAdminModal from "@/components/CreateAdminModal";
 
 interface User {
   _id: string;
@@ -53,6 +54,7 @@ export default function AdminDashboard() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockReason, setBlockReason] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -190,6 +192,12 @@ export default function AdminDashboard() {
               <p className="text-red-100">Welcome back, Admin {user.name}</p>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowCreateAdminModal(true)}
+                className="bg-white text-red-600 hover:bg-red-100 px-4 py-2 rounded-md transition duration-200 font-medium"
+              >
+                Create Admin
+              </button>
               <Link
                 href="/profile"
                 className="bg-red-700 hover:bg-red-800 px-4 py-2 rounded-md transition duration-200"
@@ -568,6 +576,17 @@ export default function AdminDashboard() {
                  </div>
        )}
 
+       {/* Create Admin Modal */}
+       <CreateAdminModal
+         isOpen={showCreateAdminModal}
+         onClose={() => setShowCreateAdminModal(false)}
+         onSuccess={(message) => {
+           showNotification(message, "success");
+           fetchUsers(); // Refresh the user list
+         }}
+         onError={(message) => showNotification(message, "error")}
+       />
+
        {/* Notification Component */}
        <Notification
          message={notification.message}
@@ -577,4 +596,4 @@ export default function AdminDashboard() {
        />
      </div>
    );
- } 
+ }

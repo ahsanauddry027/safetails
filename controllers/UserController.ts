@@ -160,26 +160,38 @@ export class UserController {
   // Authenticate user
   static async authenticateUser(email: string, password: string) {
     try {
-      const user = await User.findOne({ email, isActive: true, isBlocked: false });
+      // First check if user exists at all
+      const userExists = await User.findOne({ email });
       
-      if (!user) {
-        throw new Error("User not found or account is blocked");
+      if (!userExists) {
+        throw new Error("User not found");
       }
-
-      const validPassword = await bcrypt.compare(password, user.password);
+      
+      // Then check if user is inactive
+      if (!userExists.isActive) {
+        throw new Error("Account is inactive");
+      }
+      
+      // Then check if user is blocked
+      if (userExists.isBlocked) {
+        throw new Error("Account is blocked");
+      }
+      
+      // Now we know the user exists, is active and not blocked
+      const validPassword = await bcrypt.compare(password, userExists.password);
       if (!validPassword) {
         throw new Error("Invalid password");
       }
 
       return {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        phone: user.phone,
-        address: user.address,
-        bio: user.bio,
-        profileImage: user.profileImage
+        id: userExists._id,
+        email: userExists.email,
+        name: userExists.name,
+        role: userExists.role,
+        phone: userExists.phone,
+        address: userExists.address,
+        bio: userExists.bio,
+        profileImage: userExists.profileImage
       };
     } catch (error) {
       console.error("Authenticate user error:", error);
@@ -268,4 +280,4 @@ export class UserController {
       throw new Error("Failed to fetch users");
     }
   }
-} 
+}

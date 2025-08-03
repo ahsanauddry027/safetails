@@ -1,20 +1,16 @@
 // pages/api/admin/create-admin.ts
-import { NextApiRequest, NextApiResponse } from "next";
+import { NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import { withAdminAuth, AuthenticatedRequest } from "@/utils/adminAuth";
 
-export default async function handler(
-  req: NextApiRequest,
+async function handler(
+  req: AuthenticatedRequest,
   res: NextApiResponse
 ) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  // Only allow in development
-  if (process.env.NODE_ENV === "production") {
-    return res.status(403).json({ error: "Not available in production" });
   }
 
   const { name, email, password } = req.body;
@@ -57,4 +53,6 @@ export default async function handler(
     console.error("Admin creation error:", error);
     res.status(500).json({ error: "Failed to create admin user" });
   }
-} 
+}
+
+export default withAdminAuth(handler);
