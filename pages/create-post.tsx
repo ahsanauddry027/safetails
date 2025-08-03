@@ -9,7 +9,11 @@ import dynamic from "next/dynamic";
 // Dynamically import LeafletMap to avoid SSR issues
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
   ssr: false,
-  loading: () => <div className="w-full h-96 bg-gray-200 rounded-md flex items-center justify-center">Loading map...</div>
+  loading: () => (
+    <div className="w-full h-96 bg-gray-200 rounded-md flex items-center justify-center">
+      Loading map...
+    </div>
+  ),
 });
 
 const mapContainerStyle = {
@@ -18,8 +22,8 @@ const mapContainerStyle = {
 };
 
 const defaultCenter = {
-  lat: 40.7128, // New York
-  lng: -74.006,
+  lat: 23.8103,
+  lng: 90.4125,
 };
 
 const CreatePost = () => {
@@ -441,10 +445,16 @@ const CreatePost = () => {
                 or found.
               </p>
 
-              <div style={mapContainerStyle} className="rounded-md overflow-hidden">
+              <div
+                style={mapContainerStyle}
+                className="rounded-md overflow-hidden"
+              >
                 <LeafletMap
                   center={userLocation || defaultCenter}
-                  marker={location.coordinates}
+                  marker={[
+                    location.coordinates[0] ?? defaultCenter.lng,
+                    location.coordinates[1] ?? defaultCenter.lat,
+                  ]}
                   onMapClick={handleMapClick}
                 />
               </div>

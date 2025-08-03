@@ -46,7 +46,7 @@ const LeafletMap = ({
   return (
     <MapContainer
       center={center}
-      zoom={13}
+      zoom={15}
       style={{ width: "100%", height: "100%" }}
       scrollWheelZoom={true}
     >
