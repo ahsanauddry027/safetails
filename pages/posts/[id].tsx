@@ -191,13 +191,7 @@ const PostDetail = () => {
       case "emergency":
         return "bg-orange-100 text-orange-800";
       case "wounded":
-        if (
-          user &&
-          post &&
-          post.userId._id ===
-            ((user as AuthUserType)._id ?? (user as AuthUserType).id)
-        )
-          return true;
+        return "bg-purple-100 text-purple-800";
       default:
         return "bg-blue-100 text-blue-800";
     }
@@ -290,9 +284,9 @@ const PostDetail = () => {
                           post.status
                         )}`}
                       >
-                        {post.postType
-                          ? post.postType.charAt(0).toUpperCase() +
-                            post.postType.slice(1)
+                        {post.status
+                          ? post.status.charAt(0).toUpperCase() +
+                            post.status.slice(1)
                           : "Unknown"}
                       </span>
                       {post.isEmergency && (
