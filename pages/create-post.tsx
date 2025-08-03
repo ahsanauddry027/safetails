@@ -4,7 +4,13 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import Link from "next/link";
-import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import dynamic from "next/dynamic";
+
+// Dynamically import LeafletMap to avoid SSR issues
+const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
+  ssr: false,
+  loading: () => <div className="w-full h-96 bg-gray-200 rounded-md flex items-center justify-center">Loading map...</div>
+});
 
 const mapContainerStyle = {
   width: "100%",
@@ -46,8 +52,10 @@ const CreatePost = () => {
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [userLocation, setUserLocation] = useState(null);
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -76,7 +84,11 @@ const CreatePost = () => {
   }, []);
 
   // Handle form input changes
-  const handleChange = (e) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -85,9 +97,7 @@ const CreatePost = () => {
   };
 
   // Handle map click to set location
-  const handleMapClick = (e) => {
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
+  const handleMapClick = (lat: number, lng: number) => {
     setLocation({
       ...location,
       coordinates: [lng, lat],
@@ -95,7 +105,9 @@ const CreatePost = () => {
   };
 
   // Handle location description change
-  const handleLocationDescChange = (e) => {
+  const handleLocationDescChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
     setLocation({
       ...location,
       description: e.target.value,
@@ -103,7 +115,7 @@ const CreatePost = () => {
   };
 
   // Handle form submission
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError("");
@@ -122,9 +134,14 @@ const CreatePost = () => {
       router.push(`/posts/${response.data.data._id}`);
     } catch (err) {
       console.error("Error creating post:", err);
-      setError(
-        err.response?.data?.message || "Failed to create post. Please try again."
-      );
+      if (axios.isAxiosError(err)) {
+        setError(
+          err.response?.data?.message ||
+            "Failed to create post. Please try again."
+        );
+      } else {
+        setError("Failed to create post. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -146,7 +163,9 @@ const CreatePost = () => {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">Create Pet Post</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">
+            Create Pet Post
+          </h1>
 
           {error && (
             <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
@@ -169,16 +188,22 @@ const CreatePost = () => {
                       name="postType"
                       value={type}
                       checked={formData.postType === type}
-                      onChange={handleChange}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          postType: e.target.value,
+                        })
+                      }
                       className="sr-only"
                       required
                     />
                     <label
                       htmlFor={`type-${type}`}
-                      className={`block w-full p-4 text-center rounded-lg border ${formData.postType === type
-                        ? "bg-blue-50 border-blue-500 text-blue-700"
-                        : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                        } cursor-pointer transition-colors`}
+                      className={`block w-full p-4 text-center rounded-lg border ${
+                        formData.postType === type
+                          ? "bg-blue-50 border-blue-500 text-blue-700"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                      } cursor-pointer transition-colors`}
                     >
                       {type.charAt(0).toUpperCase() + type.slice(1)} Pet
                     </label>
@@ -412,27 +437,17 @@ const CreatePost = () => {
                 Location *
               </label>
               <p className="text-sm text-gray-500 mb-4">
-                Click on the map to set the location where the pet was last seen or found.
+                Click on the map to set the location where the pet was last seen
+                or found.
               </p>
 
-              <LoadScript
-                googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
-                onLoad={() => setMapLoaded(true)}
-              >
-                <GoogleMap
-                  mapContainerStyle={mapContainerStyle}
+              <div style={mapContainerStyle} className="rounded-md overflow-hidden">
+                <LeafletMap
                   center={userLocation || defaultCenter}
-                  zoom={13}
-                  onClick={handleMapClick}
-                >
-                  <Marker
-                    position={{
-                      lat: location.coordinates[1],
-                      lng: location.coordinates[0],
-                    }}
-                  />
-                </GoogleMap>
-              </LoadScript>
+                  marker={location.coordinates}
+                  onMapClick={handleMapClick}
+                />
+              </div>
 
               <div className="mt-4">
                 <label
@@ -463,7 +478,9 @@ const CreatePost = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${isSubmitting ? "opacity-70 cursor-not-allowed" : ""}`}
+                className={`px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${
+                  isSubmitting ? "opacity-70 cursor-not-allowed" : ""
+                }`}
               >
                 {isSubmitting ? "Creating..." : "Create Post"}
               </button>

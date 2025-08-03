@@ -1,4 +1,3 @@
-// context/AuthContext.tsx
 import {
   createContext,
   useContext,
@@ -74,7 +73,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateProfile, deleteProfile, loading }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, updateProfile, deleteProfile, loading }}
+    >
       {children}
     </AuthContext.Provider>
   );
