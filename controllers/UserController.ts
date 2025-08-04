@@ -115,11 +115,16 @@ export class UserController {
   // Block/Unblock user
   static async toggleUserBlock(userId: string, isBlocked: boolean, adminId: string, blockReason?: string) {
     try {
-      const updateData: any = {
+      const updateData: {
+        isBlocked: boolean;
+        blockedBy: string | null;
+        blockedAt: Date | null;
+        blockReason: string | null;
+      } = {
         isBlocked: isBlocked,
         blockedBy: isBlocked ? adminId : null,
         blockedAt: isBlocked ? new Date() : null,
-        blockReason: isBlocked ? blockReason : null
+        blockReason: isBlocked ? blockReason || null : null
       };
 
       const user = await User.findByIdAndUpdate(

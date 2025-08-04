@@ -26,7 +26,8 @@ export default async function handler(
     const result = await UserController.resetPassword(token, password);
 
     res.status(200).json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
     console.error("Reset password error:", error);
     res.status(400).json({ error: error.message || "Password reset failed" });
   }

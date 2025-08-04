@@ -35,7 +35,7 @@ export function verifyToken(token: string) {
   }
 }
 
-export function setTokenCookie(res: any, token: string) {
+export function setTokenCookie(res: { setHeader: (name: string, value: string) => void }, token: string) {
   res.setHeader(
     "Set-Cookie",
     serialize("token", token, {

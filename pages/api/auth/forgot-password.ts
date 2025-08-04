@@ -33,7 +33,8 @@ export default async function handler(
       success: true,
       message: "Password reset email sent successfully. Please check your inbox."
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Password reset request failed';
     console.error("Forgot password error:", error);
     
     // For security, always return success message even if user doesn't exist

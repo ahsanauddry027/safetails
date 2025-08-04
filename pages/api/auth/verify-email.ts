@@ -31,7 +31,8 @@ export default async function handler(
     }
 
     res.status(200).json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Email verification failed';
     console.error("Email verification error:", error);
     res.status(400).json({ error: error.message || "Email verification failed" });
   }

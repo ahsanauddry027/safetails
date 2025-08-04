@@ -45,8 +45,9 @@ export default async function handler(
       message: "User registered successfully. Please verify your email within 10 minutes.",
       user
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Registration failed';
     console.error("Registration error:", error);
-    res.status(500).json({ error: error.message || "Registration failed" });
+    res.status(500).json({ error: errorMessage });
   }
 }

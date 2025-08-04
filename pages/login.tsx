@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -20,9 +20,10 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push("/");
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Get the user-friendly message from the API response
-      const errorMessage = err.response?.data?.message || "Login failed. Please check your credentials.";
+      const axiosError = err as AxiosError<{ message?: string }>;
+      const errorMessage = axiosError.response?.data?.message || "Login failed. Please check your credentials.";
       setError(errorMessage);
     } finally {
       setLoading(false);

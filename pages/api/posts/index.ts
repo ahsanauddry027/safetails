@@ -25,8 +25,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
         
         res.status(200).json(result);
-      } catch (error: any) {
-        res.status(500).json({ success: false, message: error.message });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        res.status(500).json({ success: false, message: errorMessage });
       }
       break;
 
@@ -50,8 +51,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const newPost = await PetPostController.createPost(req.body, decoded.id);
         
         res.status(201).json({ success: true, data: newPost });
-      } catch (error: any) {
-        res.status(500).json({ success: false, message: error.message });
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        res.status(500).json({ success: false, message: errorMessage });
       }
       break;
 

@@ -3,9 +3,26 @@ import VetRequest from "@/models/VetRequest";
 import User from "@/models/User";
 import mongoose from "mongoose";
 
+interface VetRequestData {
+  userId: string;
+  petName: string;
+  petType: string;
+  petBreed?: string;
+  petAge?: string;
+  requestType: string;
+  description: string;
+  urgencyLevel?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  location?: {
+    address: string;
+    coordinates?: [number, number];
+  };
+}
+
 export class VetRequestController {
   // Create a new vet request
-  static async createRequest(requestData: any) {
+  static async createRequest(requestData: VetRequestData) {
     try {
       // Verify that the user exists
       const user = await User.findById(requestData.userId);
@@ -64,7 +81,7 @@ export class VetRequestController {
   }
 
   // Update a vet request
-  static async updateRequest(requestId: string, updateData: any) {
+  static async updateRequest(requestId: string, updateData: Partial<VetRequestData & { status: string; vetId: string }>) {
     try {
       const updatedRequest = await VetRequest.findByIdAndUpdate(
         requestId,

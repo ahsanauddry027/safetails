@@ -3,9 +3,35 @@ import PetPost from "@/models/PetPost";
 import User from "@/models/User";
 import mongoose from "mongoose";
 
+interface PostData {
+  title: string;
+  postType: string;
+  petName: string;
+  petType: string;
+  petBreed?: string;
+  petAge?: string;
+  petGender?: string;
+  petColor?: string;
+  description: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  lastSeenDate?: string;
+  location?: {
+    coordinates: [number, number];
+    address?: string;
+    description?: string;
+  };
+}
+
+interface QueryFilter {
+  postType?: string;
+  status?: string;
+  userId?: string;
+}
+
 export class PetPostController {
   // Create a new pet post
-  static async createPost(postData: any, userId: string) {
+  static async createPost(postData: PostData, userId: string) {
     try {
       // Verify that the user exists
       const user = await User.findById(userId);
@@ -16,7 +42,7 @@ export class PetPostController {
       // Create the post
       const newPost = await PetPost.create({
         ...postData,
-        userId
+        userId,
       });
 
       return newPost;
@@ -27,18 +53,18 @@ export class PetPostController {
   }
 
   // Get all posts with optional filtering
-  static async getPosts(query: any = {}, limit: number = 20, skip: number = 0) {
+  static async getPosts(query: QueryFilter = {}, limit: number = 20, skip: number = 0) {
     try {
-      const filter: any = {};
-      
+      const filter: Record<string, unknown> = {};
+
       // Apply filters if provided
       if (query.postType) filter.postType = query.postType;
       if (query.status) filter.status = query.status;
       if (query.userId) filter.userId = query.userId;
-      
+
       // Get total count for pagination
       const total = await PetPost.countDocuments(filter);
-      
+
       // Get posts with populated user data
       const posts = await PetPost.find(filter)
         .populate("userId", "name email profileImage")
@@ -47,12 +73,12 @@ export class PetPostController {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
-      
+
       return {
         posts,
         total,
         page: Math.floor(skip / limit) + 1,
-        totalPages: Math.ceil(total / limit)
+        totalPages: Math.ceil(total / limit),
       };
     } catch (error) {
       console.error("Get posts error:", error);
@@ -67,14 +93,14 @@ export class PetPostController {
         .populate("userId", "name email profileImage")
         .populate("resolvedBy", "name email profileImage")
         .populate("comments.userId", "name email profileImage");
-      
+
       if (!post) {
         throw new Error("Post not found");
       }
-      
+
       // Increment view count
       await PetPost.findByIdAndUpdate(postId, { $inc: { views: 1 } });
-      
+
       return post;
     } catch (error) {
       console.error("Get post by ID error:", error);
@@ -83,27 +109,25 @@ export class PetPostController {
   }
 
   // Update a post
-  static async updatePost(postId: string, updateData: any, userId: string) {
+  static async updatePost(postId: string, updateData: Partial<PostData>, userId: string) {
     try {
       // Find the post
       const post = await PetPost.findById(postId);
-      
+
       if (!post) {
         throw new Error("Post not found");
       }
-      
+
       // Check if the user is the owner of the post
       if (post.userId.toString() !== userId) {
         throw new Error("Not authorized to update this post");
       }
-      
+
       // Update the post
-      const updatedPost = await PetPost.findByIdAndUpdate(
-        postId,
-        updateData,
-        { new: true }
-      );
-      
+      const updatedPost = await PetPost.findByIdAndUpdate(postId, updateData, {
+        new: true,
+      });
+
       return updatedPost;
     } catch (error) {
       console.error("Update post error:", error);
@@ -116,32 +140,36 @@ export class PetPostController {
     try {
       // Find the post
       const post = await PetPost.findById(postId);
-      
+
       if (!post) {
         throw new Error("Post not found");
       }
-      
+
       // Check if the user is the owner of the post or an admin/vet
       const user = await User.findById(userId);
       if (!user) {
         throw new Error("User not found");
       }
-      
-      if (post.userId.toString() !== userId && user.role !== "admin" && user.role !== "vet") {
+
+      if (
+        post.userId.toString() !== userId &&
+        user.role !== "admin" &&
+        user.role !== "vet"
+      ) {
         throw new Error("Not authorized to resolve this post");
       }
-      
+
       // Update the post
       const resolvedPost = await PetPost.findByIdAndUpdate(
         postId,
-        { 
+        {
           status: "resolved",
           resolvedAt: new Date(),
-          resolvedBy: userId
+          resolvedBy: userId,
         },
         { new: true }
       );
-      
+
       return resolvedPost;
     } catch (error) {
       console.error("Resolve post error:", error);
@@ -154,24 +182,28 @@ export class PetPostController {
     try {
       // Find the post
       const post = await PetPost.findById(postId);
-      
+
       if (!post) {
         throw new Error("Post not found");
       }
-      
+
       // Check if the user is the owner of the post or an admin
       const user = await User.findById(userId);
       if (!user) {
         throw new Error("User not found");
       }
-      
-      if (post.userId.toString() !== userId && user.role !== "admin") {
+
+      if (
+        post.userId.toString() !== userId &&
+        user.role !== "admin" &&
+        user.role !== "vet"
+      ) {
         throw new Error("Not authorized to delete this post");
       }
-      
+
       // Delete the post
       await PetPost.findByIdAndDelete(postId);
-      
+
       return { success: true, message: "Post deleted successfully" };
     } catch (error) {
       console.error("Delete post error:", error);
@@ -187,28 +219,28 @@ export class PetPostController {
       if (!user) {
         throw new Error("User not found");
       }
-      
+
       // Find the post
       const post = await PetPost.findById(postId);
       if (!post) {
         throw new Error("Post not found");
       }
-      
+
       // Add the comment
       const updatedPost = await PetPost.findByIdAndUpdate(
         postId,
-        { 
-          $push: { 
-            comments: { 
-              userId, 
+        {
+          $push: {
+            comments: {
+              userId,
               text,
-              createdAt: new Date() 
-            } 
-          } 
+              createdAt: new Date(),
+            },
+          },
         },
         { new: true }
       ).populate("comments.userId", "name email profileImage");
-      
+
       return updatedPost;
     } catch (error) {
       console.error("Add comment error:", error);
@@ -217,30 +249,39 @@ export class PetPostController {
   }
 
   // Find nearby posts based on location
-  static async findNearbyPosts(longitude: number, latitude: number, maxDistance: number = 10000, postType?: string) {
+  static async findNearbyPosts(
+    longitude: number,
+    latitude: number,
+    maxDistance: number = 10000,
+    postTypes?: string[]
+  ) {
     try {
-      const filter: any = {
+      const filter: Record<string, unknown> = {
         "location.coordinates": {
           $near: {
             $geometry: {
               type: "Point",
-              coordinates: [longitude, latitude]
+              coordinates: [longitude, latitude],
             },
-            $maxDistance: maxDistance // in meters
-          }
+            $maxDistance: maxDistance, // in meters
+          },
         },
-        status: "active"
+        status: "active",
       };
-      
+
       // Add post type filter if provided
-      if (postType) {
-        filter.postType = postType;
+      if (postTypes && postTypes.length > 0) {
+        if (postTypes.length === 1) {
+          filter.postType = postTypes[0];
+        } else {
+          filter.postType = { $in: postTypes };
+        }
       }
-      
+
       const posts = await PetPost.find(filter)
         .populate("userId", "name email profileImage")
         .sort({ createdAt: -1 });
-      
+
       return posts;
     } catch (error) {
       console.error("Find nearby posts error:", error);

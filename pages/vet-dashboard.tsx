@@ -3,22 +3,66 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+
+interface Stats {
+  totalCases: number;
+  activeCases: number;
+  completedCases: number;
+  pendingConsultations: number;
+}
+
+interface VetRequest {
+  _id: string;
+  petName: string;
+  requestType: string;
+  status: string;
+  userId?: {
+    name: string;
+  };
+}
+
+interface Post {
+  _id: string;
+  title: string;
+  postType: string;
+  petName: string;
+  petType: string;
+  petBreed?: string;
+  petAge?: string;
+  petGender?: string;
+  description: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  createdAt: string;
+  userId?: {
+    name: string;
+  };
+  location?: {
+    address?: string;
+  };
+}
+
+interface Location {
+  lat: number;
+  lng: number;
+}
 
 export default function VetDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     totalCases: 0,
     activeCases: 0,
     completedCases: 0,
     pendingConsultations: 0
   });
-  const [requests, setRequests] = useState([]);
-  const [nearbyPosts, setNearbyPosts] = useState([]);
+  const [requests, setRequests] = useState<VetRequest[]>([]);
+  const [nearbyPosts, setNearbyPosts] = useState<Post[]>([]);
+  const [vetConsultantPosts, setVetConsultantPosts] = useState<Post[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState("");
-  const [location, setLocation] = useState(null);
+  const [location, setLocation] = useState<Location | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -78,18 +122,69 @@ export default function VetDashboard() {
   
   // Fetch nearby pet posts
   const fetchNearbyPosts = async () => {
+    if (!location) {
+      console.log("Location not available yet");
+      return;
+    }
+    
     try {
-      const response = await axios.get(`/api/posts/nearby?lng=${location.lng}&lat=${location.lat}&distance=10&postType=emergency,wounded`);
-      setNearbyPosts(response.data.posts || []);
-    } catch (err) {
+      console.log(`Fetching nearby posts for location: ${location.lat}, ${location.lng}`);
+      const response = await axios.get(`/api/posts/nearby?longitude=${location.lng}&latitude=${location.lat}&distance=10&postType=emergency,wounded`);
+      console.log("Nearby posts response:", response.data);
+      setNearbyPosts(response.data.data || []);
+    } catch (err: unknown) {
+      const axiosError = err as AxiosError;
       console.error("Error fetching nearby posts:", err);
+      console.error("Error details:", axiosError.response?.data);
+      // Set empty array on error to prevent UI issues
+      setNearbyPosts([]);
+      // Optionally show an error message to the user
+      if (axiosError.response?.status === 400) {
+        console.warn("Bad request - possibly invalid coordinates or no posts with location data");
+      }
     }
   };
 
+  // Fetch vet consultant posts
+  const fetchVetConsultantPosts = async () => {
+    try {
+      const response = await axios.get('/api/posts?postType=vet-consultant&status=active');
+      console.log('Vet consultant posts response:', response.data);
+      setVetConsultantPosts(response.data.posts || []);
+      
+      // Update total cases and pending consultations count to include vet consultant posts
+      setStats(prevStats => ({
+        ...prevStats,
+        totalCases: (prevStats.totalCases || 0) + (response.data.posts?.length || 0),
+        pendingConsultations: response.data.posts?.length || 0
+      }));
+    } catch (err) {
+      console.error('Error fetching vet consultant posts:', err);
+    }
+  };
+  
+  // Handle resolving a vet consultant post
+  const handleResolveConsultation = async (postId: string) => {
+    if (!confirm('Are you sure you want to resolve and remove this consultation?')) {
+      return;
+    }
+    
+    try {
+      // Delete the post from database
+      await axios.delete(`/api/posts/${postId}`);
+      // Refresh the vet consultant posts
+      fetchVetConsultantPosts();
+    } catch (err) {
+      console.error('Error resolving consultation:', err);
+      setError('Failed to resolve consultation. Please try again.');
+    }
+  };
+  
   // Fetch vet data when component mounts and user is authenticated
   useEffect(() => {
     if (user && user.role === "vet") {
       fetchVetData();
+      fetchVetConsultantPosts();
       getUserLocation();
     }
   }, [user]);
@@ -102,7 +197,7 @@ export default function VetDashboard() {
   }, [location]);
   
   // Function to handle accepting a request
-  const handleAcceptRequest = async (requestId) => {
+  const handleAcceptRequest = async (requestId: string) => {
     try {
       await axios.put(`/api/vet/requests/${requestId}`, { status: "accepted" });
       // Refresh data after update
@@ -114,7 +209,7 @@ export default function VetDashboard() {
   };
   
   // Function to handle completing a request
-  const handleCompleteRequest = async (requestId) => {
+  const handleCompleteRequest = async (requestId: string) => {
     try {
       await axios.put(`/api/vet/requests/${requestId}`, { status: "completed" });
       // Refresh data after update
@@ -369,6 +464,93 @@ export default function VetDashboard() {
               <p className="text-gray-500 text-center py-4">No nearby emergency posts found.</p>
             )}
           </div>
+        </div>
+
+        {/* Vet Consultant Posts Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Vet Consultant Posts</h3>
+          {vetConsultantPosts && vetConsultantPosts.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Pet Details
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Owner
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {vetConsultantPosts.map((post) => (
+                    <tr key={post._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{post.petName}</div>
+                        <div className="text-sm text-gray-500">{post.petType} - {post.petBreed}</div>
+                        <div className="text-xs text-gray-400">{post.petAge} • {post.petGender}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 max-w-xs truncate" title={post.description}>
+                          {post.description}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{post.userId?.name || 'Unknown'}</div>
+                        <div className="text-sm text-gray-500">{post.contactPhone || post.contactEmail}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                          Pending
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <Link
+                            href={`/posts/${post._id}`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleResolveConsultation(post._id)}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            Resolved
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">
+                <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <p className="text-gray-500">No vet consultant posts found</p>
+              <p className="text-sm text-gray-400 mt-1">New consultation requests will appear here</p>
+            </div>
+          )}
         </div>
 
         {/* Emergency Contacts */}

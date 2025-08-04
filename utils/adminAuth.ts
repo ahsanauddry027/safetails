@@ -4,8 +4,17 @@ import { verifyToken } from "@/utils/auth";
 import cookie from "cookie";
 import User from "@/models/User";
 
+interface AdminUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  isBlocked: boolean;
+}
+
 export interface AuthenticatedRequest extends NextApiRequest {
-  adminUser?: any;
+  adminUser?: AdminUser;
 }
 
 export const adminAuthMiddleware = async (
@@ -34,7 +43,7 @@ export const adminAuthMiddleware = async (
   }
 };
 
-export const withAdminAuth = (handler: Function) => {
+export const withAdminAuth = (handler: (req: AuthenticatedRequest, res: NextApiResponse) => Promise<void>) => {
   return async (req: AuthenticatedRequest, res: NextApiResponse) => {
     try {
       const { token } = cookie.parse(req.headers.cookie || "");

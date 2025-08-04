@@ -29,7 +29,8 @@ export default async function handler(
       success: true,
       message: "Verification email sent successfully. Please check your inbox."
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to resend verification';
     console.error("Resend verification error:", error);
     res.status(400).json({ error: error.message || "Failed to resend verification email" });
   }

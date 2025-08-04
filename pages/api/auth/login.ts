@@ -38,23 +38,24 @@ export default async function handler(
     setTokenCookie(res, token);
 
     return res.status(200).json({ user });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const error = err as Error;
     console.error("Login error:", err);
     
     // Set appropriate status code based on error type
     let statusCode = 401; // Default unauthorized
     
     // Customize status code based on error message
-    if (err.message === "User not found") {
+    if (error.message === "User not found") {
       statusCode = 404; // Not found
-    } else if (err.message === "Account is inactive" || err.message === "Account is blocked") {
+    } else if (error.message === "Account is inactive" || error.message === "Account is blocked") {
       statusCode = 403; // Forbidden
     }
     
     return res.status(statusCode).json({ 
-      error: err.message || "Internal error",
+      error: error.message || "Internal error",
       // Add a user-friendly message
-      message: getLoginErrorMessage(err.message)
+      message: getLoginErrorMessage(error.message)
     });
   }
 }

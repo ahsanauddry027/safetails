@@ -184,7 +184,7 @@ const CreatePost = () => {
                 Post Type *
               </label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {["missing", "emergency", "wounded"].map((type) => (
+                {["missing", "emergency", "wounded", "vet-consultant"].map((type) => (
                   <div key={type} className="relative">
                     <input
                       type="radio"
@@ -209,7 +209,7 @@ const CreatePost = () => {
                           : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
                       } cursor-pointer transition-colors`}
                     >
-                      {type.charAt(0).toUpperCase() + type.slice(1)} Pet
+                      {type === "vet-consultant" ? "Vet Consultant" : type.charAt(0).toUpperCase() + type.slice(1) + " Pet"}
                     </label>
                   </div>
                 ))}

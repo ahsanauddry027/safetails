@@ -20,7 +20,8 @@ export default async function handler(
     const user = await UserController.getUserByToken(decoded.id);
 
     res.status(200).json({ user });
-  } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
     console.error("Auth error:", error);
     res.status(401).json({ error: error.message || "Unauthorized" });
   }
