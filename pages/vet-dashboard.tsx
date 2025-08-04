@@ -6,7 +6,6 @@ import Link from "next/link";
 import axios, { AxiosError } from "axios";
 
 interface Stats {
-  totalCases: number;
   activeCases: number;
   completedCases: number;
   pendingConsultations: number;
@@ -52,10 +51,9 @@ export default function VetDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState<Stats>({
-    totalCases: 0,
     activeCases: 0,
     completedCases: 0,
-    pendingConsultations: 0
+    pendingConsultations: 0,
   });
   const [requests, setRequests] = useState<VetRequest[]>([]);
   const [nearbyPosts, setNearbyPosts] = useState<Post[]>([]);
@@ -76,18 +74,17 @@ export default function VetDashboard() {
   const fetchVetData = async () => {
     setDataLoading(true);
     setError("");
-    
+
     try {
       // Fetch vet requests
       const response = await axios.get("/api/vet/requests");
-      
+
       if (response.data) {
         setRequests(response.data.requests || []);
         setStats({
-          totalCases: response.data.stats?.total || 0,
-          activeCases: response.data.stats?.active || 0,
-          completedCases: response.data.stats?.completed || 0,
-          pendingConsultations: response.data.stats?.pending || 0
+          activeCases: response.data.stats?.activeCases || 0,
+          completedCases: response.data.stats?.completedCases || 0,
+          pendingConsultations: response.data.stats?.pendingConsultations || 0,
         });
       }
     } catch (err) {
@@ -97,7 +94,7 @@ export default function VetDashboard() {
       setDataLoading(false);
     }
   };
-  
+
   // Get user's current location
   const getUserLocation = () => {
     if (navigator.geolocation) {
@@ -105,31 +102,35 @@ export default function VetDashboard() {
         (position) => {
           setLocation({
             lat: position.coords.latitude,
-            lng: position.coords.longitude
+            lng: position.coords.longitude,
           });
         },
         (error) => {
           console.error("Error getting location:", error);
           // Set default location (can be a central location in the city)
-          setLocation({ lat: 40.7128, lng: -74.0060 }); // New York as default
+          setLocation({ lat: 40.7128, lng: -74.006 }); // New York as default
         }
       );
     } else {
       console.error("Geolocation is not supported by this browser.");
-      setLocation({ lat: 40.7128, lng: -74.0060 }); // New York as default
+      setLocation({ lat: 40.7128, lng: -74.006 }); // New York as default
     }
   };
-  
+
   // Fetch nearby pet posts
   const fetchNearbyPosts = async () => {
     if (!location) {
       console.log("Location not available yet");
       return;
     }
-    
+
     try {
-      console.log(`Fetching nearby posts for location: ${location.lat}, ${location.lng}`);
-      const response = await axios.get(`/api/posts/nearby?longitude=${location.lng}&latitude=${location.lat}&distance=10&postType=emergency,wounded`);
+      console.log(
+        `Fetching nearby posts for location: ${location.lat}, ${location.lng}`
+      );
+      const response = await axios.get(
+        `/api/posts/nearby?longitude=${location.lng}&latitude=${location.lat}&distance=10&postType=emergency,wounded`
+      );
       console.log("Nearby posts response:", response.data);
       setNearbyPosts(response.data.data || []);
     } catch (err: unknown) {
@@ -140,7 +141,9 @@ export default function VetDashboard() {
       setNearbyPosts([]);
       // Optionally show an error message to the user
       if (axiosError.response?.status === 400) {
-        console.warn("Bad request - possibly invalid coordinates or no posts with location data");
+        console.warn(
+          "Bad request - possibly invalid coordinates or no posts with location data"
+        );
       }
     }
   };
@@ -148,38 +151,46 @@ export default function VetDashboard() {
   // Fetch vet consultant posts
   const fetchVetConsultantPosts = async () => {
     try {
-      const response = await axios.get('/api/posts?postType=vet-consultant&status=active');
-      console.log('Vet consultant posts response:', response.data);
+      const response = await axios.get(
+        "/api/posts?postType=vet-consultant&status=active"
+      );
+      console.log("Vet consultant posts response:", response.data);
       setVetConsultantPosts(response.data.posts || []);
-      
-      // Update total cases and pending consultations count to include vet consultant posts
-      setStats(prevStats => ({
-        ...prevStats,
-        totalCases: (prevStats.totalCases || 0) + (response.data.posts?.length || 0),
-        pendingConsultations: response.data.posts?.length || 0
-      }));
+
+      // Don't override pending consultations count - it should come from vet requests API
+      // Just set the vet consultant posts for display
     } catch (err) {
-      console.error('Error fetching vet consultant posts:', err);
+      console.error("Error fetching vet consultant posts:", err);
     }
   };
-  
+
   // Handle resolving a vet consultant post
   const handleResolveConsultation = async (postId: string) => {
-    if (!confirm('Are you sure you want to resolve and remove this consultation?')) {
+    if (
+      !confirm("Are you sure you want to resolve and remove this consultation?")
+    ) {
       return;
     }
-    
+
     try {
       // Delete the post from database
       await axios.delete(`/api/posts/${postId}`);
+
+      // Update stats to reflect the resolved case
+      setStats((prevStats) => ({
+        ...prevStats,
+        completedCases: prevStats.completedCases + 1,
+        pendingConsultations: Math.max(0, prevStats.pendingConsultations - 1),
+      }));
+
       // Refresh the vet consultant posts
       fetchVetConsultantPosts();
     } catch (err) {
-      console.error('Error resolving consultation:', err);
-      setError('Failed to resolve consultation. Please try again.');
+      console.error("Error resolving consultation:", err);
+      setError("Failed to resolve consultation. Please try again.");
     }
   };
-  
+
   // Fetch vet data when component mounts and user is authenticated
   useEffect(() => {
     if (user && user.role === "vet") {
@@ -188,18 +199,19 @@ export default function VetDashboard() {
       getUserLocation();
     }
   }, [user]);
-  
+
   // Fetch nearby posts when location is available
   useEffect(() => {
     if (location && user && user.role === "vet") {
       fetchNearbyPosts();
     }
   }, [location]);
-  
+
   // Function to handle accepting a request
   const handleAcceptRequest = async (requestId: string) => {
     try {
-      await axios.put(`/api/vet/requests/${requestId}`, { status: "accepted" });
+      // Use PATCH to assign the vet and change status
+      await axios.patch(`/api/vet/requests/${requestId}`, { action: "assign" });
       // Refresh data after update
       fetchVetData();
     } catch (err) {
@@ -207,11 +219,13 @@ export default function VetDashboard() {
       setError("Failed to accept request. Please try again.");
     }
   };
-  
+
   // Function to handle completing a request
   const handleCompleteRequest = async (requestId: string) => {
     try {
-      await axios.put(`/api/vet/requests/${requestId}`, { status: "completed" });
+      await axios.put(`/api/vet/requests/${requestId}`, {
+        status: "completed",
+      });
       // Refresh data after update
       fetchVetData();
     } catch (err) {
@@ -231,7 +245,7 @@ export default function VetDashboard() {
   if (!user || user.role !== "vet") {
     return null;
   }
-  
+
   // Show loading state when fetching data
   if (dataLoading) {
     return (
@@ -251,8 +265,12 @@ export default function VetDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold tracking-wide mb-2">Vet Dashboard</h1>
-              <p className="text-white text-opacity-80">Welcome back, Dr. {user.name}</p>
+              <h1 className="text-4xl font-bold tracking-wide mb-2">
+                Vet Dashboard
+              </h1>
+              <p className="text-white text-opacity-80">
+                Welcome back, Dr. {user.name}
+              </p>
             </div>
             <div className="flex items-center space-x-4">
               <Link
@@ -274,31 +292,31 @@ export default function VetDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Cases</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalCases || 0}</p>
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">
               <div className="p-3 bg-yellow-100 rounded-full">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-6 h-6 text-yellow-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Cases</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.activeCases || 0}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  Active Cases
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.activeCases || 0}
+                </p>
               </div>
             </div>
           </div>
@@ -306,13 +324,25 @@ export default function VetDashboard() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">
               <div className="p-3 bg-green-100 rounded-full">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.completedCases || 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.completedCases || 0}
+                </p>
               </div>
             </div>
           </div>
@@ -320,13 +350,25 @@ export default function VetDashboard() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">
               <div className="p-3 bg-red-100 rounded-full">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h6v-2H4v2zM4 15h6v-2H4v2zM4 11h6V9H4v2zM4 7h6V5H4v2z" />
+                <svg
+                  className="w-6 h-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 17h5l-5 5v-5zM4 19h6v-2H4v2zM4 15h6v-2H4v2zM4 11h6V9H4v2zM4 7h6V5H4v2z"
+                  />
                 </svg>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.pendingConsultations || 0}</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {stats.pendingConsultations || 0}
+                </p>
               </div>
             </div>
           </div>
@@ -335,103 +377,36 @@ export default function VetDashboard() {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Quick Actions
+            </h3>
             <div className="space-y-3">
-              <Link href="/posts?postType=emergency" className="block w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center">
+              <Link
+                href="/posts?postType=emergency"
+                className="block w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center"
+              >
                 Emergency Pet Posts
               </Link>
-              <Link href="/posts?postType=wounded" className="block w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center">
+              <Link
+                href="/posts?postType=wounded"
+                className="block w-full bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center"
+              >
                 Wounded Pet Posts
               </Link>
-              <Link href="/posts?postType=missing" className="block w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center">
+              <Link
+                href="/posts?postType=missing"
+                className="block w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center"
+              >
                 Missing Pet Posts
               </Link>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Cases</h3>
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
-                {error}
-              </div>
-            )}
-            <div className="space-y-3">
-              {requests.length > 0 ? (
-                requests.slice(0, 5).map((request) => (
-                  <div key={request._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-                    <div>
-                      <p className="font-medium text-gray-800">{request.petName} - {request.requestType}</p>
-                      <p className="text-sm text-gray-600">Case #{request._id.substring(0, 8)}</p>
-                      <p className="text-xs text-gray-500">{request.userId?.name || 'Unknown User'}</p>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className={`px-2 py-1 text-xs rounded-full ${request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : request.status === 'accepted' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                      </span>
-                      {request.status === 'pending' && (
-                        <button 
-                          onClick={() => handleAcceptRequest(request._id)}
-                          className="mt-2 text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
-                        >
-                          Accept
-                        </button>
-                      )}
-                      {request.status === 'accepted' && (
-                        <button 
-                          onClick={() => handleCompleteRequest(request._id)}
-                          className="mt-2 text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded"
-                        >
-                          Complete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">No cases found</p>
-              )}
-              
-              {requests.length > 5 && (
-                <div className="text-center mt-4">
-                  <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    View All Cases
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Today's Schedule</h3>
-            <div className="space-y-3">
-              {requests.filter(req => req.status === 'accepted').length > 0 ? (
-                requests
-                  .filter(req => req.status === 'accepted')
-                  .slice(0, 3)
-                  .map((request, index) => {
-                    // Generate a mock time for demonstration purposes
-                    const hours = 9 + index * 2;
-                    const time = `${hours}:00 ${hours >= 12 ? 'PM' : 'AM'}`;
-                    
-                    return (
-                      <div key={request._id} className="flex items-center justify-between p-3 bg-blue-50 rounded-md">
-                        <div>
-                          <p className="font-medium text-gray-800">{time}</p>
-                          <p className="text-sm text-gray-600">{request.requestType} - {request.petName}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-              ) : (
-                <p className="text-gray-500 text-center py-4">No scheduled appointments</p>
-              )}
-            </div>
-          </div>
-          
           {/* Nearby Emergency Posts */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Nearby Emergency Posts</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Nearby Emergency Posts
+            </h3>
             {nearbyPosts && nearbyPosts.length > 0 ? (
               <div className="space-y-4">
                 {nearbyPosts.slice(0, 3).map((post) => (
@@ -440,15 +415,26 @@ export default function VetDashboard() {
                       <div className="flex justify-between items-start">
                         <div>
                           <div className="flex items-center">
-                            <span className={`px-2 py-1 text-xs rounded-full ${post.postType === 'emergency' ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-orange-800'} mr-2`}>
-                              {post.postType.charAt(0).toUpperCase() + post.postType.slice(1)}
+                            <span
+                              className={`px-2 py-1 text-xs rounded-full ${post.postType === "emergency" ? "bg-red-100 text-red-800" : "bg-orange-100 text-orange-800"} mr-2`}
+                            >
+                              {post.postType.charAt(0).toUpperCase() +
+                                post.postType.slice(1)}
                             </span>
-                            <p className="text-sm font-medium text-gray-900">{post.petName}</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {post.petName}
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-500 mt-1">{post.description && post.description.substring(0, 60)}...</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {post.description &&
+                              post.description.substring(0, 60)}
+                            ...
+                          </p>
                           {post.location && post.location.address && (
                             <p className="text-xs text-gray-500 mt-1">
-                              <span className="font-medium">Location:</span> {post.location.address.substring(0, 30)}{post.location.address.length > 30 ? '...' : ''}
+                              <span className="font-medium">Location:</span>{" "}
+                              {post.location.address.substring(0, 30)}
+                              {post.location.address.length > 30 ? "..." : ""}
                             </p>
                           )}
                         </div>
@@ -456,19 +442,154 @@ export default function VetDashboard() {
                     </div>
                   </Link>
                 ))}
-                <Link href="/posts?postType=emergency,wounded" className="block text-center text-blue-600 hover:text-blue-800 text-sm font-medium">
+                <Link
+                  href="/posts?postType=emergency,wounded"
+                  className="block text-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
                   View All Emergency Posts
                 </Link>
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-4">No nearby emergency posts found.</p>
+              <p className="text-gray-500 text-center py-4">
+                No nearby emergency posts found.
+              </p>
             )}
           </div>
         </div>
 
+        {/* Vet Requests Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Vet Requests
+          </h3>
+          {requests && requests.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Pet Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Request Type
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Owner
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {requests.map((request) => (
+                    <tr key={request._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {request.petName}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          request.requestType === "emergency" 
+                            ? "bg-red-100 text-red-800" 
+                            : request.requestType === "consultation"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}>
+                          {request.requestType.charAt(0).toUpperCase() + request.requestType.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {request.userId?.name || "Unknown"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          request.status === "pending" 
+                            ? "bg-yellow-100 text-yellow-800" 
+                            : request.status === "accepted"
+                            ? "bg-blue-100 text-blue-800"
+                            : request.status === "completed"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}>
+                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          {request.status === "pending" && (
+                            <button
+                              onClick={() => handleAcceptRequest(request._id)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                            >
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Accept
+                            </button>
+                          )}
+                          {request.status === "accepted" && (
+                            <button
+                              onClick={() => handleCompleteRequest(request._id)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+                            >
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Complete
+                            </button>
+                          )}
+                          {request.status === "completed" && (
+                            <span className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-md">
+                              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                              Completed
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-400 mb-2">
+                <svg
+                  className="mx-auto h-12 w-12"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                  />
+                </svg>
+              </div>
+              <p className="text-gray-500">No vet requests found</p>
+              <p className="text-sm text-gray-400 mt-1">
+                New veterinary requests will appear here
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Vet Consultant Posts Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Vet Consultant Posts</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Vet Consultant Posts
+          </h3>
           {vetConsultantPosts && vetConsultantPosts.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -498,18 +619,31 @@ export default function VetDashboard() {
                   {vetConsultantPosts.map((post) => (
                     <tr key={post._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{post.petName}</div>
-                        <div className="text-sm text-gray-500">{post.petType} - {post.petBreed}</div>
-                        <div className="text-xs text-gray-400">{post.petAge} • {post.petGender}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {post.petName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {post.petType} - {post.petBreed}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {post.petAge} • {post.petGender}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 max-w-xs truncate" title={post.description}>
+                        <div
+                          className="text-sm text-gray-900 max-w-xs truncate"
+                          title={post.description}
+                        >
                           {post.description}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{post.userId?.name || 'Unknown'}</div>
-                        <div className="text-sm text-gray-500">{post.contactPhone || post.contactEmail}</div>
+                        <div className="text-sm text-gray-900">
+                          {post.userId?.name || "Unknown"}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {post.contactPhone || post.contactEmail}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(post.createdAt).toLocaleDateString()}
@@ -523,15 +657,22 @@ export default function VetDashboard() {
                         <div className="flex space-x-2">
                           <Link
                             href={`/posts/${post._id}`}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                             View
                           </Link>
                           <button
                             onClick={() => handleResolveConsultation(post._id)}
-                            className="text-green-600 hover:text-green-900"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
                           >
-                            Resolved
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Resolve
                           </button>
                         </div>
                       </td>
@@ -543,19 +684,33 @@ export default function VetDashboard() {
           ) : (
             <div className="text-center py-8">
               <div className="text-gray-400 mb-2">
-                <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <svg
+                  className="mx-auto h-12 w-12"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               </div>
               <p className="text-gray-500">No vet consultant posts found</p>
-              <p className="text-sm text-gray-400 mt-1">New consultation requests will appear here</p>
+              <p className="text-sm text-gray-400 mt-1">
+                New consultation requests will appear here
+              </p>
             </div>
           )}
         </div>
 
         {/* Emergency Contacts */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Emergency Contacts</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Emergency Contacts
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="p-4 border border-gray-200 rounded-md">
               <h4 className="font-medium text-gray-800">Animal Control</h4>

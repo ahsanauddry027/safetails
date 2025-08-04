@@ -1,7 +1,6 @@
 // controllers/PetPostController.ts
 import PetPost from "@/models/PetPost";
 import User from "@/models/User";
-import mongoose from "mongoose";
 
 interface PostData {
   title: string;
@@ -53,7 +52,11 @@ export class PetPostController {
   }
 
   // Get all posts with optional filtering
-  static async getPosts(query: QueryFilter = {}, limit: number = 20, skip: number = 0) {
+  static async getPosts(
+    query: QueryFilter = {},
+    limit: number = 20,
+    skip: number = 0
+  ) {
     try {
       const filter: Record<string, unknown> = {};
 
@@ -109,7 +112,11 @@ export class PetPostController {
   }
 
   // Update a post
-  static async updatePost(postId: string, updateData: Partial<PostData>, userId: string) {
+  static async updatePost(
+    postId: string,
+    updateData: Partial<PostData>,
+    userId: string
+  ) {
     try {
       // Find the post
       const post = await PetPost.findById(postId);

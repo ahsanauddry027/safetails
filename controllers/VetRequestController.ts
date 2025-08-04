@@ -138,17 +138,27 @@ export class VetRequestController {
         throw new Error("Veterinarian not found");
       }
 
-      // Get counts for different request statuses
-      const totalCases = await VetRequest.countDocuments({ vetId });
+      // Get counts for different request statuses for this vet
       const activeCases = await VetRequest.countDocuments({ vetId, status: "accepted" });
       const completedCases = await VetRequest.countDocuments({ vetId, status: "completed" });
+      
+      // Get pending requests that are either unassigned or assigned to this vet but still pending
       const pendingConsultations = await VetRequest.countDocuments({ 
         $or: [
-          { vetId: { $exists: false } },
-          { vetId: null }
-        ],
-        status: "pending"
+          // Unassigned pending requests (available for any vet)
+          { 
+            $or: [
+              { vetId: { $exists: false } },
+              { vetId: null }
+            ],
+            status: "pending"
+          },
+          // Requests assigned to this vet but still pending
+          { vetId, status: "pending" }
+        ]
       });
+
+      const totalCases = activeCases + completedCases;
 
       return {
         totalCases,
