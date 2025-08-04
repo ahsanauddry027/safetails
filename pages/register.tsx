@@ -15,6 +15,7 @@ export default function RegisterPage() {
     bio: ""
   });
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,11 +23,15 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError("");
     try {
       await axios.post("/api/auth/register", form);
-      router.push("/login");
+      router.push({ pathname: "/verify-email", query: { email: form.email } });
     } catch (err: any) {
       setError(err.response?.data?.error || "Registration failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -137,9 +142,10 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          className="w-full mt-6 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-4 rounded-md transition duration-200"
+          disabled={isLoading}
+          className="w-full mt-6 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-md transition duration-200"
         >
-          Create Account
+          {isLoading ? "Creating Account..." : "Create Account"}
         </button>
 
         <p className="mt-4 text-center text-gray-600">

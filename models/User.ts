@@ -16,6 +16,13 @@ const UserSchema = new mongoose.Schema(
     blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     blockedAt: { type: Date },
     blockReason: { type: String },
+    // Email verification fields
+    isEmailVerified: { type: Boolean, default: false },
+    emailVerificationToken: { type: String },
+    emailVerificationExpires: { type: Date },
+    // Password reset fields
+    passwordResetToken: { type: String },
+    passwordResetExpires: { type: Date },
   },
   { timestamps: true }
 );

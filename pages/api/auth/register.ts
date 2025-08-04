@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import { UserController } from "@/controllers/UserController";
+import { EmailService } from "@/utils/emailService";
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,6 +22,9 @@ export default async function handler(
     if (emailExists)
       return res.status(400).json({ error: "User already exists" });
 
+    // Generate OTP
+    const otp = EmailService.generateOTP();
+
     // Use controller to create user
     const user = await UserController.createUser({
       name,
@@ -29,11 +33,16 @@ export default async function handler(
       role,
       phone,
       address,
-      bio
+      bio,
+      emailVerificationToken: otp,
+      emailVerificationExpires: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes expiration
     });
 
+    // Send OTP email
+    await EmailService.sendOTPEmail(email, otp, name);
+
     res.status(201).json({ 
-      message: "User registered successfully",
+      message: "User registered successfully. Please verify your email within 10 minutes.",
       user
     });
   } catch (error: any) {

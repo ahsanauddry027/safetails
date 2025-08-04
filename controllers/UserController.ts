@@ -60,6 +60,8 @@ export class UserController {
     phone?: string;
     address?: string;
     bio?: string;
+    emailVerificationToken?: string;
+    emailVerificationExpires?: Date;
   }) {
     try {
       const { password, ...userFields } = userData;
@@ -278,6 +280,136 @@ export class UserController {
     } catch (error) {
       console.error("Get all users error:", error);
       throw new Error("Failed to fetch users");
+    }
+  }
+
+  // Verify email with OTP
+  static async verifyEmail(email: string, otp: string) {
+    try {
+      const user = await User.findOne({
+        email,
+        emailVerificationToken: otp,
+        emailVerificationExpires: { $gt: new Date() }
+      });
+
+      if (!user) {
+        throw new Error("Invalid or expired OTP");
+      }
+
+      // Update user verification status
+      user.isEmailVerified = true;
+      user.emailVerificationToken = undefined;
+      user.emailVerificationExpires = undefined;
+      await user.save();
+
+      return {
+        success: true,
+        message: "Email verified successfully",
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified
+        }
+      };
+    } catch (error) {
+      console.error("Verify email error:", error);
+      throw error;
+    }
+  }
+
+  // Resend verification email
+  static async resendVerificationEmail(email: string) {
+    try {
+      const user = await User.findOne({ email });
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (user.isEmailVerified) {
+        throw new Error("Email is already verified");
+      }
+
+      // Generate new OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      user.emailVerificationToken = otp;
+      user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await user.save();
+
+      return {
+        success: true,
+        otp,
+        user: {
+          name: user.name,
+          email: user.email
+        }
+      };
+    } catch (error) {
+      console.error("Resend verification email error:", error);
+      throw error;
+    }
+  }
+
+  // Generate password reset token
+  static async generatePasswordResetToken(email: string) {
+    try {
+      const user = await User.findOne({ email });
+      
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Generate reset token
+      const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      
+      user.passwordResetToken = resetToken;
+      user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await user.save();
+
+      return {
+        success: true,
+        resetToken,
+        user: {
+          name: user.name,
+          email: user.email
+        }
+      };
+    } catch (error) {
+      console.error("Generate password reset token error:", error);
+      throw error;
+    }
+  }
+
+  // Reset password with token
+  static async resetPassword(token: string, newPassword: string) {
+    try {
+      const user = await User.findOne({
+        passwordResetToken: token,
+        passwordResetExpires: { $gt: new Date() }
+      });
+
+      if (!user) {
+        throw new Error("Invalid or expired reset token");
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      
+      user.password = hashedPassword;
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save();
+
+      return {
+        success: true,
+        message: "Password reset successfully"
+      };
+    } catch (error) {
+      console.error("Reset password error:", error);
+      throw error;
     }
   }
 }
