@@ -4,9 +4,20 @@ import axios from "axios";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
+// Define registration form interface
+interface RegisterForm {
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+  phone: string;
+  address: string;
+  bio: string;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<RegisterForm>({
     name: "",
     email: "",
     password: "",

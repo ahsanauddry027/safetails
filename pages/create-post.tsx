@@ -26,12 +26,34 @@ const defaultCenter = {
   lng: 90.4125,
 };
 
+// Define types
+interface FormData {
+  title: string;
+  postType: string;
+  petName: string;
+  petType: string;
+  petBreed: string;
+  petAge: string;
+  petGender: string;
+  petColor: string;
+  description: string;
+  contactPhone: string;
+  contactEmail: string;
+  lastSeenDate: string;
+}
+
+interface LocationData {
+  coordinates: [number, number];
+  address: string;
+  description: string;
+}
+
 const CreatePost = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     title: "",
     postType: "missing",
     petName: "",
@@ -47,7 +69,7 @@ const CreatePost = () => {
   });
 
   // Location state
-  const [location, setLocation] = useState({
+  const [location, setLocation] = useState<LocationData>({
     coordinates: [defaultCenter.lng, defaultCenter.lat],
     address: "",
     description: "",
@@ -80,7 +102,7 @@ const CreatePost = () => {
             coordinates: [longitude, latitude],
           });
         },
-        (error) => {
+        (error: GeolocationPositionError) => {
           console.error("Error getting location:", error);
         }
       );
@@ -134,8 +156,14 @@ const CreatePost = () => {
       // Submit the post
       const response = await axios.post("/api/posts", postData);
 
-      // Redirect to the post page
-      router.push(`/posts/${response.data.data._id}`);
+      // Redirect based on post type
+      if (response.data.type === 'vet-request') {
+        // For vet consultant requests, redirect to profile page with a success message
+        router.push('/profile?success=vet-request');
+      } else {
+        // For regular posts, redirect to the post page
+        router.push(`/posts/${response.data.data._id}`);
+      }
     } catch (err) {
       console.error("Error creating post:", err);
       if (axios.isAxiosError(err)) {

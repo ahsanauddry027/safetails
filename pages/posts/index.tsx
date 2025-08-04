@@ -70,7 +70,7 @@ const Posts = () => {
   };
   
   // Handle filter changes
-  const handleFilterChange = (e) => {
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters({
       ...filters,
@@ -88,7 +88,7 @@ const Posts = () => {
   };
   
   // Handle pagination
-  const handlePageChange = (page) => {
+  const handlePageChange = (page: number) => {
     setCurrentPage(page);
     
     // Update URL with new page
@@ -99,7 +99,7 @@ const Posts = () => {
   };
   
   // Format date for display
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
@@ -109,7 +109,7 @@ const Posts = () => {
   };
   
   // Get status badge color
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
         return "bg-yellow-100 text-yellow-800";
@@ -123,7 +123,7 @@ const Posts = () => {
   };
   
   // Get post type badge color
-  const getPostTypeColor = (type) => {
+  const getPostTypeColor = (type: string) => {
     switch (type) {
       case "missing":
         return "bg-red-100 text-red-800";

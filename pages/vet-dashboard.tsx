@@ -3,14 +3,9 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 
-interface Stats {
-  activeCases: number;
-  completedCases: number;
-  pendingConsultations: number;
-}
-
+// Define types
 interface VetRequest {
   _id: string;
   petName: string;
@@ -21,28 +16,33 @@ interface VetRequest {
   };
 }
 
-interface Post {
+interface NearbyPost {
   _id: string;
-  title: string;
-  postType: string;
+  postType: "emergency" | "wounded" | "missing";
+  petName: string;
+  description: string;
+  location?: {
+    address: string;
+  };
+}
+
+interface VetConsultantPost {
+  _id: string;
   petName: string;
   petType: string;
-  petBreed?: string;
-  petAge?: string;
-  petGender?: string;
+  petBreed: string;
+  petAge: string;
+  petGender: string;
   description: string;
-  contactPhone?: string;
-  contactEmail?: string;
   createdAt: string;
   userId?: {
     name: string;
   };
-  location?: {
-    address?: string;
-  };
+  contactPhone?: string;
+  contactEmail?: string;
 }
 
-interface Location {
+interface LocationState {
   lat: number;
   lng: number;
 }
@@ -50,17 +50,19 @@ interface Location {
 export default function VetDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState<Stats>({
+  const [stats, setStats] = useState({
     activeCases: 0,
     completedCases: 0,
     pendingConsultations: 0,
   });
   const [requests, setRequests] = useState<VetRequest[]>([]);
-  const [nearbyPosts, setNearbyPosts] = useState<Post[]>([]);
-  const [vetConsultantPosts, setVetConsultantPosts] = useState<Post[]>([]);
+  const [nearbyPosts, setNearbyPosts] = useState<NearbyPost[]>([]);
+  const [vetConsultantPosts, setVetConsultantPosts] = useState<
+    VetConsultantPost[]
+  >([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState("");
-  const [location, setLocation] = useState<Location | null>(null);
+  const [location, setLocation] = useState<LocationState | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -81,6 +83,7 @@ export default function VetDashboard() {
 
       if (response.data) {
         setRequests(response.data.requests || []);
+        console.log(response.data);
         setStats({
           activeCases: response.data.stats?.activeCases || 0,
           completedCases: response.data.stats?.completedCases || 0,
@@ -105,7 +108,7 @@ export default function VetDashboard() {
             lng: position.coords.longitude,
           });
         },
-        (error) => {
+        (error: GeolocationPositionError) => {
           console.error("Error getting location:", error);
           // Set default location (can be a central location in the city)
           setLocation({ lat: 40.7128, lng: -74.006 }); // New York as default
@@ -134,17 +137,21 @@ export default function VetDashboard() {
       console.log("Nearby posts response:", response.data);
       setNearbyPosts(response.data.data || []);
     } catch (err: unknown) {
-      const axiosError = err as AxiosError;
       console.error("Error fetching nearby posts:", err);
-      console.error("Error details:", axiosError.response?.data);
+      
+      // Check if error is an axios error with response
+      if (axios.isAxiosError(err)) {
+        console.error("Error details:", err.response?.data);
+        // Optionally show an error message to the user
+        if (err.response?.status === 400) {
+          console.warn(
+            "Bad request - possibly invalid coordinates or no posts with location data"
+          );
+        }
+      }
+      
       // Set empty array on error to prevent UI issues
       setNearbyPosts([]);
-      // Optionally show an error message to the user
-      if (axiosError.response?.status === 400) {
-        console.warn(
-          "Bad request - possibly invalid coordinates or no posts with location data"
-        );
-      }
     }
   };
 
@@ -156,9 +163,6 @@ export default function VetDashboard() {
       );
       console.log("Vet consultant posts response:", response.data);
       setVetConsultantPosts(response.data.posts || []);
-
-      // Don't override pending consultations count - it should come from vet requests API
-      // Just set the vet consultant posts for display
     } catch (err) {
       console.error("Error fetching vet consultant posts:", err);
     }
@@ -205,7 +209,7 @@ export default function VetDashboard() {
     if (location && user && user.role === "vet") {
       fetchNearbyPosts();
     }
-  }, [location]);
+  }, [location, user]);
 
   // Function to handle accepting a request
   const handleAcceptRequest = async (requestId: string) => {
@@ -378,7 +382,7 @@ export default function VetDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Quick Actions
+              Quick Actions5
             </h3>
             <div className="space-y-3">
               <Link
@@ -493,14 +497,17 @@ export default function VetDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          request.requestType === "emergency" 
-                            ? "bg-red-100 text-red-800" 
-                            : request.requestType === "consultation"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}>
-                          {request.requestType.charAt(0).toUpperCase() + request.requestType.slice(1)}
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            request.requestType === "emergency"
+                              ? "bg-red-100 text-red-800"
+                              : request.requestType === "consultation"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {request.requestType.charAt(0).toUpperCase() +
+                            request.requestType.slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -509,16 +516,19 @@ export default function VetDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          request.status === "pending" 
-                            ? "bg-yellow-100 text-yellow-800" 
-                            : request.status === "accepted"
-                            ? "bg-blue-100 text-blue-800"
-                            : request.status === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}>
-                          {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            request.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : request.status === "accepted"
+                                ? "bg-blue-100 text-blue-800"
+                                : request.status === "completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {request.status.charAt(0).toUpperCase() +
+                            request.status.slice(1)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -528,8 +538,18 @@ export default function VetDashboard() {
                               onClick={() => handleAcceptRequest(request._id)}
                               className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                             >
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              <svg
+                                className="w-3 h-3 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
                               </svg>
                               Accept
                             </button>
@@ -539,16 +559,34 @@ export default function VetDashboard() {
                               onClick={() => handleCompleteRequest(request._id)}
                               className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
                             >
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              <svg
+                                className="w-3 h-3 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
                               </svg>
                               Complete
                             </button>
                           )}
                           {request.status === "completed" && (
                             <span className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-md">
-                              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              <svg
+                                className="w-3 h-3 mr-1"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                               Completed
                             </span>
@@ -659,9 +697,24 @@ export default function VetDashboard() {
                             href={`/posts/${post._id}`}
                             className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
                           >
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            <svg
+                              className="w-3 h-3 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
                             </svg>
                             View
                           </Link>
@@ -669,8 +722,18 @@ export default function VetDashboard() {
                             onClick={() => handleResolveConsultation(post._id)}
                             className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
                           >
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg
+                              className="w-3 h-3 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
                             </svg>
                             Resolve
                           </button>

@@ -4,10 +4,22 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
+interface FormState {
+  name: string;
+  phone: string;
+  address: string;
+  bio: string;
+}
+
+interface Message {
+  type: string;
+  text: string;
+}
+
 export default function EditProfilePage() {
   const { user, updateProfile, loading } = useAuth();
   const router = useRouter();
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     name: "",
     phone: "",
     address: "",
@@ -44,10 +56,20 @@ export default function EditProfilePage() {
       setTimeout(() => {
         router.push("/profile");
       }, 1500);
-    } catch (error: any) {
-      setMessage({ 
-        type: "error", 
-        text: error.response?.data?.error || "Failed to update profile" 
+    } catch (error: unknown) {
+      // Handle axios errors or other structured errors
+      let errorMessage = "Failed to update profile";
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        errorMessage = axiosError.response?.data?.error || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      setMessage({
+        type: "error",
+        text: errorMessage,
       });
     } finally {
       setIsSubmitting(false);

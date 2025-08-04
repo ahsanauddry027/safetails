@@ -27,7 +27,7 @@ const PostDetail = () => {
   };
   const router = useRouter();
   const { id } = router.query;
-  const commentInputRef = useRef(null);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Define Post type
   type UserType = {

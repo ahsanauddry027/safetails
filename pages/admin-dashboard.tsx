@@ -31,6 +31,15 @@ interface UserStats {
   totalActive: number;
 }
 
+interface PostStats {
+  total: number;
+  missing: number;
+  emergency: number;
+  wounded: number;
+  active: number;
+  resolved: number;
+}
+
 export default function AdminDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -49,7 +58,7 @@ export default function AdminDashboard() {
     totalActive: 0
   });
   
-  const [postStats, setPostStats] = useState({
+  const [postStats, setPostStats] = useState<PostStats>({
     total: 0,
     missing: 0,
     emergency: 0,

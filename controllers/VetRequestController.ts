@@ -9,14 +9,16 @@ interface VetRequestData {
   petType: string;
   petBreed?: string;
   petAge?: string;
+  petGender?: string;
   requestType: string;
   description: string;
   urgencyLevel?: string;
   contactPhone?: string;
   contactEmail?: string;
   location?: {
-    address: string;
+    address?: string;
     coordinates?: [number, number];
+    description?: string;
   };
 }
 
@@ -129,7 +131,7 @@ export class VetRequestController {
     }
   }
 
-  // Get request statistics for a vet
+// Get request statistics for a vet
   static async getVetStats(vetId: string) {
     try {
       // Verify that the vet exists and has the vet role

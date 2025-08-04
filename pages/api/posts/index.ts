@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import { PetPostController } from "@/controllers/PetPostController";
+import { VetRequestController } from "@/controllers/VetRequestController";
 import { verifyToken } from "@/utils/auth";
 import cookie from "cookie";
 
@@ -47,10 +48,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(401).json({ success: false, message: "Invalid token" });
         }
         
-        // Create post
-        const newPost = await PetPostController.createPost(req.body, decoded.id);
-        
-        res.status(201).json({ success: true, data: newPost });
+        // Check if this is a vet-consultant request
+        if (req.body.postType === "vet-consultant") {
+          // Create a VetRequest instead of a PetPost
+          const vetRequestData = {
+            userId: decoded.id,
+            petName: req.body.petName,
+            petType: req.body.petType,
+            petBreed: req.body.petBreed,
+            petAge: req.body.petAge,
+            petGender: req.body.petGender,
+            requestType: "consultation",
+            description: req.body.description,
+            contactPhone: req.body.contactPhone,
+            contactEmail: req.body.contactEmail,
+            location: req.body.location
+          };
+          
+          const newRequest = await VetRequestController.createRequest(vetRequestData);
+          res.status(201).json({ success: true, data: newRequest, type: 'vet-request' });
+        } else {
+          // Create post for other types (missing, emergency, wounded)
+          const newPost = await PetPostController.createPost(req.body, decoded.id);
+          res.status(201).json({ success: true, data: newPost });
+        }
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         res.status(500).json({ success: false, message: errorMessage });

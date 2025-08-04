@@ -22,8 +22,12 @@ export default function VerifyEmailPage() {
     try {
       await axios.post("/api/auth/verify-email", { email, otp });
       router.push("/welcome"); // Redirect to welcome page upon success
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Verification failed");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.error || "Verification failed");
+      } else {
+        setError("Verification failed");
+      }
     }
   };
 
@@ -34,8 +38,12 @@ export default function VerifyEmailPage() {
     try {
       await axios.post("/api/auth/resend-verification", { email });
       setSuccess("OTP sent successfully! Please check your inbox.");
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to resend OTP");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.error || "Failed to resend OTP");
+      } else {
+        setError("Failed to resend OTP");
+      }
     } finally {
       setIsResending(false);
     }
@@ -47,7 +55,9 @@ export default function VerifyEmailPage() {
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-lg shadow-md w-full max-w-md"
       >
-        <h2 className="text-3xl mb-6 font-bold text-center text-gray-800">Verify Your Email</h2>
+        <h2 className="text-3xl mb-6 font-bold text-center text-gray-800">
+          Verify Your Email
+        </h2>
         <div className="space-y-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Enter the OTP sent to your email address:
@@ -78,11 +88,9 @@ export default function VerifyEmailPage() {
         >
           Verify OTP
         </button>
-        
+
         <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600 mb-2">
-            Didn't receive the OTP?
-          </p>
+          <p className="text-sm text-gray-600 mb-2">Did not receive the OTP?</p>
           <button
             type="button"
             onClick={handleResendOTP}
@@ -92,7 +100,7 @@ export default function VerifyEmailPage() {
             {isResending ? "Sending..." : "Resend OTP"}
           </button>
         </div>
-        
+
         {email && (
           <p className="mt-4 text-center text-xs text-gray-500">
             OTP sent to: {email}
@@ -102,4 +110,3 @@ export default function VerifyEmailPage() {
     </div>
   );
 }
-

@@ -49,6 +49,29 @@ const VetRequestSchema = new mongoose.Schema(
     isEmergency: { 
       type: Boolean, 
       default: false 
+    },
+    contactPhone: {
+      type: String
+    },
+    contactEmail: {
+      type: String
+    },
+    petGender: {
+      type: String,
+      enum: ["male", "female", "unknown"],
+      default: "unknown"
+    },
+    location: {
+      coordinates: {
+        type: [Number], // [lng, lat]
+        required: false
+      },
+      address: {
+        type: String
+      },
+      description: {
+        type: String
+      }
     }
   },
   { timestamps: true }

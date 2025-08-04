@@ -33,7 +33,9 @@ export default function DeleteProfilePage() {
     try {
       await deleteProfile();
       router.push("/");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete profile. Please try again.";
       alert("Failed to delete profile. Please try again.");
     } finally {
       setIsDeleting(false);

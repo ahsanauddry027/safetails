@@ -21,7 +21,7 @@ export default async function handler(
 
     const decoded = verifyToken(token) as { id: string };
     const user = await User.findById(decoded.id);
-    
+
     if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
@@ -29,34 +29,37 @@ export default async function handler(
     // For GET requests, fetch vet requests
     if (req.method === "GET") {
       // Only vets can get their requests
+      console.log(user, "User details");
       if (user.role !== "vet") {
         return res.status(403).json({ error: "Access denied" });
       }
 
       const stats = await VetRequestController.getVetStats(user._id);
       const requests = await VetRequestController.getVetRequests(user._id);
-      
+
       return res.status(200).json({ stats, requests });
     }
-    
+
     // For POST requests, create a new request
     else if (req.method === "POST") {
       // Any authenticated user can create a request
       const requestData = {
         ...req.body,
-        userId: user._id
+        userId: user._id,
       };
-      
+
       const newRequest = await VetRequestController.createRequest(requestData);
       return res.status(201).json({ request: newRequest });
     }
-    
+
     // Method not allowed
     else {
       return res.status(405).json({ error: "Method not allowed" });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("API error:", error);
-    return res.status(500).json({ error: error.message || "Server error" });
+    const errMsg =
+      error instanceof Error ? error.message : "Internal server error";
+    return res.status(500).json({ error: errMsg });
   }
 }

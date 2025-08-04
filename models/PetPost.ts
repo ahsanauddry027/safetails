@@ -21,7 +21,7 @@ const PetPostSchema = new mongoose.Schema(
     },
     postType: {
       type: String,
-      enum: ["missing", "emergency", "wounded", "vet-consultant"],
+      enum: ["missing", "emergency", "wounded"],
       required: true,
     },
     petName: {

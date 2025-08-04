@@ -12,55 +12,66 @@ export default async function handler(
 ) {
   await dbConnect();
 
-  // Get the request ID from the URL
-  const { id } = req.query;
-  
-  if (!id || typeof id !== "string") {
-    return res.status(400).json({ error: "Invalid request ID" });
-  }
-
-  // Verify authentication
   try {
-    const { token } = cookie.parse(req.headers.cookie || "");
+    // Parse cookies safely
+    const cookies = cookie.parse(req.headers.cookie || "");
+    const token = cookies.token;
+
     if (!token) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
-    const decoded = verifyToken(token) as { id: string };
+    // Verify JWT and fetch user
+    const decoded = verifyToken(token);
     const user = await User.findById(decoded.id);
-    
+
     if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
 
-    // For PUT requests, update the request
-    if (req.method === "PUT") {
-      // Only vets can update requests
-      if (user.role !== "vet") {
-        return res.status(403).json({ error: "Access denied" });
-      }
+    // Only vets can modify requests
+    if (user.role !== "vet") {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
-      const updatedRequest = await VetRequestController.updateRequest(id, req.body);
-      return res.status(200).json({ request: updatedRequest });
-    }
-    
-    // For PATCH requests, assign a vet to the request
-    else if (req.method === "PATCH" && req.body.action === "assign") {
-      // Only vets can be assigned to requests
-      if (user.role !== "vet") {
-        return res.status(403).json({ error: "Only veterinarians can be assigned to requests" });
-      }
+    const { id: requestId } = req.query;
 
-      const updatedRequest = await VetRequestController.assignVet(id, user._id);
-      return res.status(200).json({ request: updatedRequest });
+    // Ensure requestId is a string
+    if (!requestId || typeof requestId !== "string") {
+      return res.status(400).json({ error: "Invalid request ID" });
     }
-    
-    // Method not allowed
-    else {
-      return res.status(405).json({ error: "Method not allowed" });
+
+    switch (req.method) {
+      case "PATCH":
+        const { action } = req.body;
+
+        if (action === "assign") {
+          // Assign the vet to this request and change status to accepted
+          const updatedRequest = await VetRequestController.assignVet(
+            requestId,
+            user._id
+          );
+          return res.status(200).json({ success: true, data: updatedRequest });
+        }
+
+        return res.status(400).json({ error: "Invalid action" });
+
+      case "PUT":
+        // Update request status (e.g., mark as completed)
+        const updateData = req.body;
+        const updatedRequest = await VetRequestController.updateRequest(
+          requestId,
+          updateData
+        );
+        return res.status(200).json({ success: true, data: updatedRequest });
+
+      default:
+        return res.status(405).json({ error: "Method not allowed" });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("API error:", error);
-    return res.status(500).json({ error: error.message || "Server error" });
+    const errMsg =
+      error instanceof Error ? error.message : "Internal server error";
+    return res.status(500).json({ error: errMsg });
   }
 }
