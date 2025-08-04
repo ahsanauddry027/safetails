@@ -227,12 +227,12 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-red-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="bg-gradient-to-r from-indigo-600 via-red-500 to-yellow-500 text-white shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-              <p className="text-red-100">Welcome back, Admin {user.name}</p>
+              <h1 className="text-4xl font-bold tracking-wide mb-2">Admin Dashboard</h1>
+              <p className="text-white text-opacity-80">Welcome back, {user.name}</p>
             </div>
             <div className="flex items-center space-x-4">
               <button

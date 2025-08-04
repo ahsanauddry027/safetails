@@ -9,24 +9,24 @@ export default function Navbar() {
 
   if (loading) {
     return (
-      <nav className="bg-gray-800 text-white px-4 py-3 flex justify-between items-center">
-        <Link href="/" className="text-xl font-bold">
+      <nav className="bg-gray-900 text-white px-4 py-3 flex justify-between items-center shadow-lg">
+        <Link href="/" className="text-2xl font-bold tracking-wide hover:text-gray-300">
           SafeTails
         </Link>
-        <div className="animate-pulse bg-gray-600 h-4 w-20 rounded"></div>
+        <div className="bg-gray-800 h-4 w-20 rounded"></div>
       </nav>
     );
   }
 
   return (
-    <nav className="bg-gray-800 text-white px-4 py-3 flex justify-between items-center">
-      <Link href="/" className="text-xl font-bold">
+    <nav className="bg-gray-900 text-white px-4 py-4 flex justify-between items-center shadow-lg">
+      <Link href="/" className="text-2xl font-bold tracking-wide hover:text-gray-300 transition-colors duration-200">
         SafeTails
       </Link>
       
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-6 items-center">
         {/* Common navigation links */}
-        <Link href="/posts" className="hover:text-yellow-300">
+        <Link href="/posts" className="px-3 py-2 rounded-md hover:bg-gray-800 hover:text-gray-200 transition-all duration-200 font-medium">
           Pet Posts
         </Link>
         
@@ -34,12 +34,12 @@ export default function Navbar() {
           <>
             {/* Role-specific navigation */}
             {user.role === "vet" && (
-              <Link href="/vet-dashboard" className="hover:text-yellow-300">
+              <Link href="/vet-dashboard" className="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 font-medium">
                 Vet Dashboard
               </Link>
             )}
             {user.role === "admin" && (
-              <Link href="/admin-dashboard" className="hover:text-red-300">
+              <Link href="/admin-dashboard" className="px-3 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white transition-all duration-200 font-medium">
                 Admin Panel
               </Link>
             )}
@@ -48,10 +48,10 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
-                className="flex items-center gap-2 hover:text-yellow-300"
+                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-800 transition-all duration-200"
               >
-                <span>{user.name}</span>
-                <span className="text-xs bg-gray-600 px-2 py-1 rounded">
+                <span className="font-medium">{user.name}</span>
+                <span className="text-xs bg-gray-700 px-2 py-1 rounded-full font-medium">
                   {user.role}
                 </span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,7 +60,7 @@ export default function Navbar() {
               </button>
               
                              {showDropdown && (
-                 <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded shadow-lg py-2 z-50 border border-gray-200">
+                 <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-lg shadow-xl py-2 z-50 border border-gray-200">
                    <Link 
                      href="/profile" 
                      className="block px-4 py-2 hover:bg-gray-100 text-gray-800"
@@ -98,8 +98,8 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            <Link href="/login" className="hover:text-yellow-300">Login</Link>
-            <Link href="/register" className="hover:text-yellow-300">Register</Link>
+            <Link href="/login" className="px-4 py-2 rounded-md border border-gray-600 hover:bg-gray-800 hover:border-gray-500 transition-all duration-200 font-medium">Login</Link>
+            <Link href="/register" className="px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 font-medium">Register</Link>
           </>
         )}
       </div>

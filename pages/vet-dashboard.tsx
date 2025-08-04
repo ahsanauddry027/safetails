@@ -152,12 +152,12 @@ export default function VetDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="bg-gradient-to-r from-teal-400 via-blue-500 to-green-600 text-white shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Vet Dashboard</h1>
-              <p className="text-blue-100">Welcome back, Dr. {user.name}</p>
+              <h1 className="text-4xl font-bold tracking-wide mb-2">Vet Dashboard</h1>
+              <p className="text-white text-opacity-80">Welcome back, Dr. {user.name}</p>
             </div>
             <div className="flex items-center space-x-4">
               <Link
