@@ -23,3 +23,8 @@ Thumbs.db
 *.tgz
 coverage
 .next.cache
+Functional_Requirements.md
+CONVERSION_SUMMARY.md
+EMAIL_SETUP.md
+LOCAL_DEV_GUIDE.md
+SETUP.md
