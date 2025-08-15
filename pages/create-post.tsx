@@ -139,15 +139,16 @@ const CreatePost = () => {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          setError("Please select only image files.");
+        // Validate file type (PNG, JPEG, JPG)
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+        if (!allowedTypes.includes(file.type)) {
+          setError("Please select only PNG, JPEG, or JPG image files.");
           continue;
         }
 
-        // Validate file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          setError("Image size must be less than 5MB.");
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+          setError("Image size must be less than 2MB.");
           continue;
         }
 
@@ -155,6 +156,7 @@ const CreatePost = () => {
         const reader = new FileReader();
         reader.onload = async (event) => {
           const base64Image = event.target?.result as string;
+          console.log("Image converted to base64, length:", base64Image.length);
           
           try {
             // Upload image
@@ -163,6 +165,7 @@ const CreatePost = () => {
             });
 
             if (response.data.success) {
+              console.log("Image uploaded successfully, URL length:", response.data.imageUrl.length);
               setFormData(prev => ({
                 ...prev,
                 images: [...prev.images, response.data.imageUrl]
@@ -221,6 +224,11 @@ const CreatePost = () => {
         ...formData,
         location: location,
       };
+
+      console.log("Submitting post data:", {
+        ...postData,
+        images: postData.images.map((img, i) => `Image ${i + 1}: ${img.length} chars`)
+      });
 
       // Submit the post
       const response = await axios.post("/api/posts", postData);
@@ -322,15 +330,15 @@ const CreatePost = () => {
               <div className="space-y-4">
                 {/* Image Upload Button */}
                 <div className="relative">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={uploadingImage}
-                  />
+                                     <input
+                     ref={fileInputRef}
+                     type="file"
+                     multiple
+                     accept="image/png,image/jpeg,image/jpg"
+                     onChange={handleImageUpload}
+                     className="hidden"
+                     disabled={uploadingImage}
+                   />
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -344,9 +352,9 @@ const CreatePost = () => {
                       <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">
                         {uploadingImage ? "Uploading..." : "Click to upload pet photos"}
                       </p>
-                      <p className="text-sm text-gray-500 mt-2">
-                        Upload up to 5 images (max 5MB each)
-                      </p>
+                                             <p className="text-sm text-gray-500 mt-2">
+                         Upload up to 5 images (PNG, JPEG, JPG only, max 2MB each)
+                       </p>
                     </div>
                   </button>
                 </div>

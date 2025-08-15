@@ -111,6 +111,8 @@ const PostDetail = () => {
 
     try {
       const response = await axios.get(`/api/posts/${id}`);
+      console.log("Post data received:", response.data.data);
+      console.log("Images array:", response.data.data.images);
       setPost(response.data.data);
     } catch (err) {
       console.error("Error fetching post:", err);
@@ -332,14 +334,20 @@ const PostDetail = () => {
               </div>
 
               {/* Images Section */}
-              {post.images && post.images.length > 0 && (
+              {post.images && post.images.length > 0 ? (
                 <div className="p-8 border-b-2 border-gray-200">
                   <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
                     <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
                     </svg>
-                    Pet Photos
+                    Pet Photos ({post.images.length})
                   </h2>
+                  
+                  {/* Debug info */}
+                  <div className="mb-4 p-4 bg-gray-100 rounded-lg text-sm text-gray-600">
+                    <p>Debug: Found {post.images.length} images</p>
+                    <p>First image length: {post.images[0]?.length || 0} characters</p>
+                  </div>
                   
                   {/* Main Image */}
                   <div className="mb-6">
@@ -348,6 +356,10 @@ const PostDetail = () => {
                       alt={`${post.petName} photo`}
                       className="w-full h-96 object-cover rounded-2xl border-2 border-gray-200 hover:border-black transition-all duration-300 cursor-pointer"
                       onClick={() => setSelectedImage(selectedImage || post.images[0])}
+                      onError={(e) => {
+                        console.error("Image failed to load:", e);
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
                   </div>
 
@@ -365,11 +377,30 @@ const PostDetail = () => {
                                 : 'border-gray-200 group-hover:border-black'
                             }`}
                             onClick={() => setSelectedImage(image)}
+                            onError={(e) => {
+                              console.error(`Thumbnail ${index} failed to load:`, e);
+                              e.currentTarget.style.display = 'none';
+                            }}
                           />
                         </div>
                       ))}
                     </div>
                   )}
+                </div>
+              ) : (
+                <div className="p-8 border-b-2 border-gray-200">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
+                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
+                    </svg>
+                    Pet Photos
+                  </h2>
+                  <div className="text-center py-8">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
+                    </svg>
+                    <p className="text-gray-500 text-lg">No photos uploaded for this pet</p>
+                  </div>
                 </div>
               )}
 
