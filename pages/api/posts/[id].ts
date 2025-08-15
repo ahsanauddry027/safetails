@@ -2,7 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import { PetPostController } from "@/controllers/PetPostController";
-import { verifyToken } from "@/utils/auth";
+import { verifyTokenAndCheckBlocked } from "@/utils/auth";
 import cookie from "cookie";
 
 export default async function handler(
@@ -24,7 +24,7 @@ export default async function handler(
     }
 
     try {
-      const decoded = await verifyToken(token);
+      const decoded = await verifyTokenAndCheckBlocked(token);
       return decoded?.id || null;
     } catch (error) {
       return null;

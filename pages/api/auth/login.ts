@@ -14,7 +14,7 @@ function getLoginErrorMessage(errorMessage: string): string {
     case "Account is inactive":
       return "Your account is currently inactive. Please contact support for assistance.";
     case "Account is blocked":
-      return "Your account has been blocked. Please contact support for more information.";
+      return "Your account has been blocked by an administrator. You cannot login until the block is removed. Please contact support for assistance.";
     default:
       return "An error occurred during login. Please try again later.";
   }

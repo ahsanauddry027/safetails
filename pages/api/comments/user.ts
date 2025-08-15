@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../utils/db';
 import CommentController from '../../../controllers/CommentController';
-import { verifyToken } from '../../../utils/auth';
+import { verifyTokenAndCheckBlocked } from '../../../utils/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const decoded = verifyToken(token);
+    const decoded = await verifyTokenAndCheckBlocked(token);
     (req as any).user = decoded;
   } catch (error) {
     return res.status(401).json({ message: 'Invalid token' });

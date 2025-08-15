@@ -215,6 +215,11 @@ export class UserController {
         throw new Error("User not found or inactive");
       }
 
+      // Check if user is blocked
+      if (user.isBlocked) {
+        throw new Error("Account is blocked");
+      }
+
       return user;
     } catch (error) {
       console.error("Get user by token error:", error);

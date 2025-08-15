@@ -39,8 +39,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .then((res) => {
         setUser(res.data.user);
       })
-      .catch(() => {
-        setUser(null);
+      .catch((error) => {
+        // If user is blocked, clear the user state and redirect to login
+        if (error.response?.status === 403 && error.response?.data?.error === "Account is blocked") {
+          console.log("User account is blocked, logging out");
+          setUser(null);
+          // Optionally redirect to login page
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+        } else {
+          setUser(null);
+        }
       })
       .finally(() => {
         setLoading(false);

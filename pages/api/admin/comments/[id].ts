@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../../utils/db';
 import CommentController from '../../../../controllers/CommentController';
-import { verifyToken } from '../../../../utils/auth';
+import { verifyTokenAndCheckBlocked } from '../../../../utils/auth';
 import { adminAuth } from '../../../../utils/adminAuth';
 import cookie from 'cookie';
 
@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const decoded = verifyToken(token);
+    const decoded = await verifyTokenAndCheckBlocked(token);
     const isAdmin = await adminAuth(decoded.id);
     if (!isAdmin) {
       return res.status(403).json({ message: 'Admin access required' });

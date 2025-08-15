@@ -35,6 +35,15 @@ export const adminAuthMiddleware = async (
       return res.status(403).json({ error: "Admin access required" });
     }
 
+    // Check if admin user is blocked or inactive
+    if (adminUser.isBlocked) {
+      return res.status(403).json({ error: "Your admin account has been blocked" });
+    }
+
+    if (!adminUser.isActive) {
+      return res.status(403).json({ error: "Your admin account is inactive" });
+    }
+
     req.adminUser = adminUser;
     next();
   } catch (error) {
@@ -58,6 +67,15 @@ export const withAdminAuth = (handler: (req: AuthenticatedRequest, res: NextApiR
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      // Check if admin user is blocked or inactive
+      if (adminUser.isBlocked) {
+        return res.status(403).json({ error: "Your admin account has been blocked" });
+      }
+
+      if (!adminUser.isActive) {
+        return res.status(403).json({ error: "Your admin account is inactive" });
+      }
+
       req.adminUser = adminUser;
       return handler(req, res);
     } catch (error) {
@@ -71,7 +89,7 @@ export const withAdminAuth = (handler: (req: AuthenticatedRequest, res: NextApiR
 export const adminAuth = async (userId: string): Promise<boolean> => {
   try {
     const user = await User.findById(userId);
-    return user?.role === "admin";
+    return user?.role === "admin" && user?.isActive && !user?.isBlocked;
   } catch (error) {
     console.error("Admin auth check error:", error);
     return false;

@@ -2,7 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import { UserController } from "@/controllers/UserController";
-import { verifyToken } from "@/utils/auth";
+import { verifyTokenAndCheckBlocked } from "@/utils/auth";
 import cookie from "cookie";
 
 export default async function handler(
@@ -18,7 +18,7 @@ export default async function handler(
     const { token } = cookie.parse(req.headers.cookie || "");
     if (!token) return res.status(401).json({ error: "Not authenticated" });
 
-    const decoded = verifyToken(token) as { id: string };
+    const decoded = await verifyTokenAndCheckBlocked(token);
     await dbConnect();
     
     // Get complete statistics including current admin

@@ -35,6 +35,40 @@ export function verifyToken(token: string) {
   }
 }
 
+// Enhanced token verification that also checks if user is blocked
+export async function verifyTokenAndCheckBlocked(token: string) {
+  try {
+    const decoded = jwt.verify(token, secret, {
+      issuer: "safetails",
+      audience: "safetails-users"
+    }) as { id: string };
+
+    // Import User model dynamically to avoid circular dependencies
+    const { default: User } = await import('@/models/User');
+    const { default: dbConnect } = await import('@/utils/db');
+    
+    await dbConnect();
+    const user = await User.findById(decoded.id).select('isBlocked isActive');
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    if (!user.isActive) {
+      throw new Error("User account is inactive");
+    }
+    
+    if (user.isBlocked) {
+      throw new Error("Account is blocked");
+    }
+    
+    return decoded;
+  } catch (error) {
+    console.error("Enhanced token verification error:", error);
+    throw error;
+  }
+}
+
 export function setTokenCookie(res: { setHeader: (name: string, value: string) => void }, token: string) {
   res.setHeader(
     "Set-Cookie",

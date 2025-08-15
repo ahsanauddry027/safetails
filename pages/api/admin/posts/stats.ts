@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { verifyToken } from "../../../../utils/auth";
+import { verifyTokenAndCheckBlocked } from "../../../../utils/auth";
 import dbConnect from "../../../../utils/db";
 import PetPost from "../../../../models/PetPost";
 import User from "../../../../models/User";
@@ -26,7 +26,7 @@ export default async function handler(
     }
 
     console.log("Token found, verifying...");
-    const decoded = verifyToken(token) as { id: string };
+    const decoded = await verifyTokenAndCheckBlocked(token);
     console.log("Token decoded:", { id: decoded?.id });
     
     if (!decoded || !decoded.id) {

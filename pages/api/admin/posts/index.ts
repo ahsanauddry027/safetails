@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { verifyToken } from '../../../../utils/auth';
+import { verifyTokenAndCheckBlocked } from '../../../../utils/auth';
 import dbConnect from '../../../../utils/db';
 import PetPost from '../../../../models/PetPost';
 import User from '../../../../models/User';
@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log("Token found, verifying...");
-    const decoded = verifyToken(token) as { id: string };
+    const decoded = await verifyTokenAndCheckBlocked(token);
     console.log("Token decoded:", { id: decoded?.id });
     
     if (!decoded || !decoded.id) {
@@ -69,6 +69,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .skip(skip)
       .limit(limit)
       .populate('userId', 'name email role');
+
+    // Debug: Log the first post to see its structure
+    if (posts.length > 0) {
+      console.log('Sample post from API:', {
+        id: posts[0]._id,
+        title: posts[0].title,
+        location: posts[0].location,
+        hasLocation: !!posts[0].location,
+        locationKeys: posts[0].location ? Object.keys(posts[0].location) : 'No location'
+      });
+    }
 
     // Get total count for pagination
     const total = await PetPost.countDocuments(query);

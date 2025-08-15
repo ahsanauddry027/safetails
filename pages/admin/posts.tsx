@@ -12,9 +12,11 @@ type PetPost = {
   petName: string;
   description: string;
   status: 'active' | 'resolved';
-  location: {
-    coordinates: [number, number];
-    address: string;
+  location?: {
+    coordinates?: [number, number];
+    address?: string;
+    type?: string;
+    description?: string;
   };
   createdAt: string;
   userId: {
@@ -75,6 +77,7 @@ const AdminPostsPage = () => {
       const response = await axios.get(`/api/admin/posts?${params}`, {
         withCredentials: true
       });
+
       setPosts(response.data.posts);
       setPagination(response.data.pagination);
     } catch (error) {
@@ -293,9 +296,33 @@ const AdminPostsPage = () => {
                         <div className="text-sm text-gray-900">{post.userId.name}</div>
                         <div className="text-sm text-gray-500">{post.userId.email}</div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-500">{post.location.address}</div>
-                      </td>
+                                             <td className="px-6 py-4">
+                         <div className="text-sm text-gray-500">
+                           {post.location ? (
+                             <>
+                               {post.location.address && (
+                                 <div className="font-medium">{post.location.address}</div>
+                               )}
+                               {post.location.coordinates && post.location.coordinates.length === 2 && (
+                                 <div className="text-xs text-gray-400 mt-1">
+                                   Coordinates: {post.location.coordinates[0].toFixed(6)}, {post.location.coordinates[1].toFixed(6)}
+                                 </div>
+                               )}
+                               {post.location.description && (
+                                 <div className="text-xs text-gray-400 mt-1">
+                                   {post.location.description}
+                                 </div>
+                               )}
+                               {!post.location.address && !post.location.coordinates && (
+                                 <div className="text-gray-400 italic">Location data incomplete</div>
+                               )}
+                               
+                             </>
+                           ) : (
+                             <div className="text-gray-400 italic">No location data</div>
+                           )}
+                         </div>
+                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {formatDate(post.createdAt)}
                       </td>
