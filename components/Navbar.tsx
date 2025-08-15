@@ -30,7 +30,7 @@ export default function Navbar() {
       <nav className="bg-white border-b border-gray-200 text-black px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50">
         <Link
           href="/"
-          className="text-2xl font-bold tracking-wide hover:text-gray-600 transition-colors duration-200"
+          className="text-2xl font-bold tracking-wide hover:text-gray-600 transition-colors duration-200 font-display"
         >
           SafeTails
         </Link>
@@ -41,12 +41,12 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white border-b border-gray-200 text-black px-6 py-4 flex justify-between items-center shadow-sm sticky top-0 z-50 backdrop-blur-sm bg-white/95">
-      <Link
-        href="/"
-        className="text-2xl font-bold tracking-wide hover:text-gray-600 transition-colors duration-200"
-      >
-        <span className="text-primary">Safe</span>Tails
-      </Link>
+              <Link
+          href="/"
+          className="text-2xl font-bold tracking-wide hover:text-gray-600 transition-colors duration-200 font-display"
+        >
+          <span className="text-primary">Safe</span>Tails
+        </Link>
 
       <div className="flex gap-6 items-center">
         {/* Common navigation links */}

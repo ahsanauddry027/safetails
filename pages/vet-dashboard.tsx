@@ -271,10 +271,10 @@ export default function VetDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-12 relative">
           <div className="flex items-center justify-between">
             <div className="group">
-              <h1 className="text-5xl font-bold tracking-wide mb-3 group-hover:scale-105 transition-transform duration-300">
+              <h1 className="text-5xl font-bold tracking-wide mb-3 group-hover:scale-105 transition-transform duration-300 font-display">
                 Vet Dashboard
               </h1>
-              <p className="text-white text-opacity-90 text-xl">
+              <p className="text-white text-opacity-90 text-xl font-body">
                 Welcome back, Dr. <span className="text-primary">{user.name}</span>
               </p>
             </div>

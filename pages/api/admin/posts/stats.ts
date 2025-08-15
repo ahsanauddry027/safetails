@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { verifyToken } from "../../../../utils/auth";
 import dbConnect from "../../../../utils/db";
 import PetPost from "../../../../models/PetPost";
+import cookie from "cookie";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,22 +15,49 @@ export default async function handler(
 
   try {
     // Verify admin authentication
-    const token = req.headers.authorization?.replace(/^Bearer\s/, "") || "";
-    const user = await verifyToken(token);
+    console.log("Cookies received:", req.headers.cookie);
+    const { token } = cookie.parse(req.headers.cookie || "");
+    console.log("Parsed token:", token ? "Token exists" : "No token");
+    
+    if (!token) {
+      console.error("No token found in cookies");
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    console.log("Token found, verifying...");
+    const user = verifyToken(token);
+    console.log("User verified:", { id: user?.id, role: user?.role });
+    
     if (!user || user.role !== "admin") {
+      console.error("User not admin:", { user: user?.role });
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     // Connect to database
-    await dbConnect();
+    try {
+      await dbConnect();
+      console.log("Database connected successfully");
+    } catch (dbError) {
+      console.error("Database connection error:", dbError);
+      return res.status(500).json({ message: "Database connection failed" });
+    }
 
     // Get post statistics
-    const total = await PetPost.countDocuments();
-    const missing = await PetPost.countDocuments({ postType: "missing" });
-    const emergency = await PetPost.countDocuments({ postType: "emergency" });
-    const wounded = await PetPost.countDocuments({ postType: "wounded" });
-    const active = await PetPost.countDocuments({ status: "active" });
-    const resolved = await PetPost.countDocuments({ status: "resolved" });
+    let total, missing, emergency, wounded, active, resolved;
+    
+    try {
+      total = await PetPost.countDocuments();
+      missing = await PetPost.countDocuments({ postType: "missing" });
+      emergency = await PetPost.countDocuments({ postType: "emergency" });
+      wounded = await PetPost.countDocuments({ postType: "wounded" });
+      active = await PetPost.countDocuments({ status: "active" });
+      resolved = await PetPost.countDocuments({ status: "resolved" });
+      
+      console.log("Post statistics calculated:", { total, missing, emergency, wounded, active, resolved });
+    } catch (queryError) {
+      console.error("Database query error:", queryError);
+      return res.status(500).json({ message: "Failed to fetch post statistics" });
+    }
 
     // Return statistics
     return res.status(200).json({
@@ -42,6 +70,7 @@ export default async function handler(
     });
   } catch (error) {
     console.error("Error fetching post statistics:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    return res.status(500).json({ message: errorMessage });
   }
 }

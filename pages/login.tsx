@@ -37,7 +37,7 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border-4 border-gray-200 hover:border-black transition-all duration-300"
       >
-        <h2 className="text-4xl mb-8 font-bold text-center text-black">Login</h2>
+        <h2 className="text-4xl mb-8 font-bold text-center text-black font-display">Login</h2>
         
         {error && (
           <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 text-red-700 rounded-2xl">
@@ -47,7 +47,7 @@ export default function LoginPage() {
         
         <div className="space-y-6">
           <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Email</label>
+            <label className="block text-lg font-semibold text-gray-700 mb-2 font-heading">Email</label>
             <input
               type="email"
               placeholder="your@email.com"
@@ -59,7 +59,7 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <label className="block text-lg font-semibold text-gray-700 mb-2">Password</label>
+            <label className="block text-lg font-semibold text-gray-700 mb-2 font-heading">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -92,7 +92,7 @@ export default function LoginPage() {
         </div>
         <button
           type="submit"
-          className={`w-full mt-8 bg-black hover:bg-gray-800 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 text-lg transform hover:scale-105 hover:shadow-2xl ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+          className={`w-full mt-8 bg-black hover:bg-gray-800 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 text-lg transform hover:scale-105 hover:shadow-2xl font-primary ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
           disabled={loading}
         >
           {loading ? 'Logging in...' : 'Login'}

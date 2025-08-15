@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Link from 'next/link';
-import { useAuth } from '../../contexts/AuthContext';
-import DashboardLayout from '../../components/DashboardLayout';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { useAuth } from '../../context/AuthContext';
+import Navbar from '../../components/Navbar';
 
 type PetPost = {
   _id: string;
@@ -136,11 +135,10 @@ const AdminPostsPage = () => {
 
   if (authLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex justify-center items-center h-screen">
-          <LoadingSpinner />
-        </div>
-      </DashboardLayout>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="loading-spinner"></div>
+        <p className="ml-4 text-gray-600 font-medium">Loading...</p>
+      </div>
     );
   }
 
@@ -149,17 +147,19 @@ const AdminPostsPage = () => {
   }
 
   return (
-    <DashboardLayout>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Pet Posts Management</h1>
-          <Link href="/admin-dashboard" className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded-md transition duration-200">
-            Back to Dashboard
+          <h1 className="text-3xl font-bold text-black font-display">Pet Posts Management</h1>
+          <Link href="/admin-dashboard" className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1">
+            <span className="relative z-10 font-bold">Back to Dashboard</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </Link>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="group bg-white rounded-3xl shadow-2xl p-8 mb-12 border-4 border-gray-200 hover:border-black transition-all duration-300">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="w-full md:w-1/4">
               <label htmlFor="postType" className="block text-sm font-medium text-gray-700 mb-1">Post Type</label>
@@ -193,19 +193,21 @@ const AdminPostsPage = () => {
             <div className="w-full md:w-1/2 flex items-end">
               <button
                 onClick={() => fetchPosts()}
-                className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition duration-200"
+                className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
               >
-                Apply Filters
+                <span className="relative z-10 font-bold">Apply Filters</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
             </div>
           </div>
         </div>
 
         {/* Posts Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="group bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-gray-200 hover:border-black transition-all duration-300">
           {loading ? (
             <div className="flex justify-center items-center py-20">
-              <LoadingSpinner />
+              <div className="loading-spinner"></div>
+              <p className="ml-4 text-gray-600 font-medium">Loading posts...</p>
             </div>
           ) : posts.length === 0 ? (
             <div className="text-center py-20">
@@ -340,7 +342,7 @@ const AdminPostsPage = () => {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
 };
 

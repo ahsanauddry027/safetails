@@ -92,9 +92,14 @@ export default function AdminDashboard() {
   }, [user, loading, router]);
 
   useEffect(() => {
+    console.log("User state changed:", { user: user?.role, loading });
     if (user?.role === "admin") {
+      console.log("User is admin, fetching data...");
       fetchUsers();
-      fetchPostStats();
+      // Temporarily disable post stats to avoid 401 error
+      // setTimeout(() => {
+      //   fetchPostStats();
+      // }, 100);
     }
   }, [user]);
 
@@ -114,8 +119,12 @@ export default function AdminDashboard() {
     try {
       setLoadingUsers(true);
       
+      console.log("Fetching users...");
       // Fetch users with complete statistics
-      const response = await axios.get("/api/admin/users");
+      const response = await axios.get("/api/admin/users", {
+        withCredentials: true
+      });
+      console.log("Users response:", response.data);
       setUsers(response.data.users);
       setStats(response.data.stats);
     } catch (error) {
@@ -129,10 +138,29 @@ export default function AdminDashboard() {
   // Fetch post statistics
   const fetchPostStats = async () => {
     try {
-      const response = await axios.get("/api/admin/posts/stats");
+      console.log("Fetching post stats...");
+      console.log("Current user:", user);
+      
+      // Test with a simple request first
+      try {
+        const testResponse = await axios.get("/api/auth/me", {
+          withCredentials: true
+        });
+        console.log("Auth test response:", testResponse.data);
+      } catch (testError) {
+        console.error("Auth test failed:", testError);
+      }
+      
+      const response = await axios.get("/api/admin/posts/stats", {
+        withCredentials: true
+      });
+      console.log("Post stats response:", response.data);
       setPostStats(response.data);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error fetching post stats:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to fetch post statistics";
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      showNotification(axiosError.response?.data?.message || errorMessage, "error");
     }
   };
   
@@ -180,8 +208,10 @@ export default function AdminDashboard() {
       setBlockReason("");
       fetchUsers();
       showNotification(`User ${isBlocked ? 'blocked' : 'unblocked'} successfully`, "success");
-    } catch (error: any) {
-      showNotification(error.response?.data?.error || "Failed to update user status", "error");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update user status";
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      showNotification(axiosError.response?.data?.error || errorMessage, "error");
     }
   };
 
@@ -194,8 +224,10 @@ export default function AdminDashboard() {
       await axios.delete("/api/admin/delete-user", { data: { userId } });
       fetchUsers();
       showNotification("User deleted successfully", "success");
-    } catch (error: any) {
-      showNotification(error.response?.data?.error || "Failed to delete user", "error");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete user";
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      showNotification(axiosError.response?.data?.error || errorMessage, "error");
     }
   };
 
@@ -206,8 +238,10 @@ export default function AdminDashboard() {
       setSelectedUser(null);
       fetchUsers();
       showNotification("User updated successfully", "success");
-    } catch (error: any) {
-      showNotification(error.response?.data?.error || "Failed to update user", "error");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update user";
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      showNotification(axiosError.response?.data?.error || errorMessage, "error");
     }
   };
 
@@ -251,8 +285,8 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 py-12 relative">
           <div className="flex items-center justify-between">
             <div className="group">
-              <h1 className="text-5xl font-bold tracking-wide mb-3 group-hover:scale-105 transition-transform duration-300">Admin Dashboard</h1>
-              <p className="text-white text-opacity-90 text-xl">Welcome back, <span className="text-primary">{user.name}</span></p>
+              <h1 className="text-5xl font-bold tracking-wide mb-3 group-hover:scale-105 transition-transform duration-300 font-display">Admin Dashboard</h1>
+              <p className="text-white text-opacity-90 text-xl font-body">Welcome back, <span className="text-primary">{user.name}</span></p>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -361,8 +395,16 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        {/* Post Stats Cards */}
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Pet Post Statistics</h2>
+                 {/* Post Stats Cards */}
+         <div className="flex items-center justify-between mb-4">
+           <h2 className="text-xl font-bold text-gray-800">Pet Post Statistics</h2>
+           <button
+             onClick={fetchPostStats}
+             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+           >
+             Refresh Stats
+           </button>
+         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">

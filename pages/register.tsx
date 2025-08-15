@@ -78,10 +78,10 @@ export default function RegisterPage() {
               </svg>
             </div>
           </div>
-          <h2 className="text-4xl font-bold text-black mb-2">
+          <h2 className="text-4xl font-bold text-black mb-2 font-display">
             Join SafeTails 🐾
           </h2>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-lg font-body">
             Create your account to connect with pet lovers
           </p>
         </div>

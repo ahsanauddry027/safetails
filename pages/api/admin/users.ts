@@ -15,10 +15,14 @@ export default async function handler(
 
   try {
     // Verify admin authentication
+    console.log("Users API - Cookies received:", req.headers.cookie);
     const { token } = cookie.parse(req.headers.cookie || "");
+    console.log("Users API - Token exists:", !!token);
+    
     if (!token) return res.status(401).json({ error: "Not authenticated" });
 
     const decoded = verifyToken(token) as { id: string };
+    console.log("Users API - User verified:", { id: decoded.id });
     await dbConnect();
     
     // Get all users including admins (but exclude current admin from the list)

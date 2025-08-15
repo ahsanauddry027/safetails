@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyToken } from '../../../../utils/auth';
-import { connectToDatabase } from '../../../../utils/db';
+import dbConnect from '../../../../utils/db';
 import PetPost from '../../../../models/PetPost';
+import cookie from 'cookie';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow GET requests for now
@@ -11,13 +12,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Verify admin authentication
-    const user = await verifyToken(req);
+    const { token } = cookie.parse(req.headers.cookie || "");
+    if (!token) return res.status(401).json({ message: "Not authenticated" });
+
+    const user = verifyToken(token);
     if (!user || user.role !== 'admin') {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
     // Connect to database
-    await connectToDatabase();
+    await dbConnect();
 
     // Parse query parameters
     const page = parseInt(req.query.page as string) || 1;
@@ -27,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const status = req.query.status as string;
 
     // Build query
-    const query: any = {};
+    const query: Record<string, string> = {};
     if (postType) query.postType = postType;
     if (status) query.status = status;
 

@@ -47,8 +47,9 @@ export default async function handler(
     else {
       return res.status(405).json({ error: "Method not allowed" });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("API error:", error);
-    return res.status(500).json({ error: error.message || "Server error" });
+    const errorMessage = error instanceof Error ? error.message : "Server error";
+    return res.status(500).json({ error: errorMessage });
   }
 }

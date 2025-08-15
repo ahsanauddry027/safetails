@@ -86,8 +86,10 @@ const CreateAdminModal = ({ isOpen, onClose, onSuccess, onError }: CreateAdminMo
         password: '',
         confirmPassword: ''
       });
-    } catch (error: any) {
-      onError(error.response?.data?.error || 'Failed to create admin user');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create admin user';
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      onError(axiosError.response?.data?.error || errorMessage);
     } finally {
       setLoading(false);
     }

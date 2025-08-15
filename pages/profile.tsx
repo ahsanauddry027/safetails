@@ -54,7 +54,7 @@ export default function ProfilePage() {
                 <div className="absolute inset-0 rounded-full border-4 border-white/20 group-hover:border-white/40 transition-all duration-300"></div>
               </div>
               <div className="flex-1">
-                <h1 className="text-4xl font-bold text-white mb-2 group-hover:scale-105 transition-transform duration-300">
+                <h1 className="text-4xl font-bold text-white mb-2 group-hover:scale-105 transition-transform duration-300 font-display">
                   {user.name}
                 </h1>
                 <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${getRoleBadgeColor(user.role)} shadow-lg hover:scale-105 transition-all duration-300`}>
@@ -72,7 +72,7 @@ export default function ProfilePage() {
             <div className="grid lg:grid-cols-2 gap-12">
               {/* Personal Information */}
               <div className="group">
-                <h2 className="text-2xl font-bold mb-6 text-black flex items-center group-hover:text-primary transition-colors duration-300">
+                <h2 className="text-2xl font-bold mb-6 text-black flex items-center group-hover:text-primary transition-colors duration-300 font-heading">
                   <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
