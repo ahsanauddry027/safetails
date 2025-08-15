@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { verifyToken } from "../../../../utils/auth";
 import dbConnect from "../../../../utils/db";
 import PetPost from "../../../../models/PetPost";
+import User from "../../../../models/User";
 import cookie from "cookie";
 
 export default async function handler(
@@ -25,15 +26,15 @@ export default async function handler(
     }
 
     console.log("Token found, verifying...");
-    const user = verifyToken(token);
-    console.log("User verified:", { id: user?.id, role: user?.role });
+    const decoded = verifyToken(token) as { id: string };
+    console.log("Token decoded:", { id: decoded?.id });
     
-    if (!user || user.role !== "admin") {
-      console.error("User not admin:", { user: user?.role });
-      return res.status(401).json({ message: "Unauthorized" });
+    if (!decoded || !decoded.id) {
+      console.error("Invalid token payload");
+      return res.status(401).json({ message: "Invalid token" });
     }
 
-    // Connect to database
+    // Connect to database first to check user
     try {
       await dbConnect();
       console.log("Database connected successfully");
@@ -41,6 +42,17 @@ export default async function handler(
       console.error("Database connection error:", dbError);
       return res.status(500).json({ message: "Database connection failed" });
     }
+
+    // Verify user exists and is admin
+    const adminUser = await User.findById(decoded.id);
+    console.log("User found:", { id: adminUser?._id, role: adminUser?.role, isActive: adminUser?.isActive });
+    
+    if (!adminUser || adminUser.role !== "admin" || !adminUser.isActive) {
+      console.error("User not admin or inactive:", { role: adminUser?.role, isActive: adminUser?.isActive });
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+
 
     // Get post statistics
     let total, missing, emergency, wounded, active, resolved;

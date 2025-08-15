@@ -24,6 +24,7 @@ const Posts = () => {
   // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   
   // Fetch posts when component mounts or filters change
   useEffect(() => {
@@ -32,7 +33,7 @@ const Posts = () => {
   
   // Handle query params from URL
   useEffect(() => {
-    const { postType, status, page } = router.query;
+    const { postType, status, page, deleted } = router.query;
     
     const newFilters = { ...filters };
     if (postType) newFilters.postType = postType as string;
@@ -40,6 +41,19 @@ const Posts = () => {
     setFilters(newFilters);
     
     if (page) setCurrentPage(parseInt(page as string));
+    
+    // Show success message if post was deleted
+    if (deleted === 'true') {
+      setSuccessMessage("Post deleted successfully!");
+      // Clear the query parameter
+      router.replace({
+        pathname: router.pathname,
+        query: { ...router.query, deleted: undefined }
+      }, undefined, { shallow: true });
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
   }, [router.query]);
   
   // Fetch posts from API
@@ -212,6 +226,18 @@ const Posts = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {error}
+            </div>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-8 p-6 bg-green-50 border-2 border-green-200 text-green-700 rounded-2xl">
+            <div className="flex items-center">
+              <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {successMessage}
             </div>
           </div>
         )}

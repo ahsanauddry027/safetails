@@ -72,11 +72,20 @@ const AdminPostsPage = () => {
         ...(filters.status && { status: filters.status })
       });
 
-      const response = await axios.get(`/api/admin/posts?${params}`);
+      const response = await axios.get(`/api/admin/posts?${params}`, {
+        withCredentials: true
+      });
       setPosts(response.data.posts);
       setPagination(response.data.pagination);
     } catch (error) {
       console.error('Error fetching posts:', error);
+      // Handle authentication errors
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          router.push('/login');
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -101,6 +110,35 @@ const AdminPostsPage = () => {
         ...prev,
         page: newPage
       }));
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/posts/${postId}`, {
+        withCredentials: true
+      });
+      
+      // Remove the post from the local state
+      setPosts(prev => prev.filter(post => post._id !== postId));
+      
+      // Show success message (you can add a toast notification here)
+      alert("Post deleted successfully");
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      // Handle authentication errors
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          router.push('/login');
+          return;
+        }
+      }
+      alert("Failed to delete post. Please try again.");
     }
   };
 
@@ -152,14 +190,13 @@ const AdminPostsPage = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-black font-display">Pet Posts Management</h1>
-          <Link href="/admin-dashboard" className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1">
-            <span className="relative z-10 font-bold">Back to Dashboard</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <Link href="/admin-dashboard" className="px-6 py-3 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer">
+            Back to Dashboard
           </Link>
         </div>
 
         {/* Filters */}
-        <div className="group bg-white rounded-3xl shadow-2xl p-8 mb-12 border-4 border-gray-200 hover:border-black transition-all duration-300">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-12 border-4 border-gray-200">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="w-full md:w-1/4">
               <label htmlFor="postType" className="block text-sm font-medium text-gray-700 mb-1">Post Type</label>
@@ -263,9 +300,17 @@ const AdminPostsPage = () => {
                         {formatDate(post.createdAt)}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
-                        <Link href={`/posts/${post._id}`} className="text-blue-600 hover:text-blue-900 mr-4">
-                          View
-                        </Link>
+                        <div className="flex space-x-2">
+                          <Link href={`/posts/${post._id}`} className="text-blue-600 hover:text-blue-900">
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleDeletePost(post._id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

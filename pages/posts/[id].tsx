@@ -166,6 +166,22 @@ const PostDetail = () => {
     }
   };
 
+  // Handle deleting post
+  const handleDeletePost = async () => {
+    if (!confirm("Are you sure you want to delete this post? This action cannot be undone."))
+      return;
+
+    try {
+      await axios.delete(`/api/posts/${id}`);
+      
+      // Redirect to posts page after successful deletion
+      router.push('/posts?deleted=true');
+    } catch (err) {
+      console.error("Error deleting post:", err);
+      setError("Failed to delete post. Please try again.");
+    }
+  };
+
   // Format date for display
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return "";
@@ -224,6 +240,23 @@ const PostDetail = () => {
     return false;
   };
 
+  // Check if user can delete the post
+  const canDeletePost = () => {
+    if (!user || !post) return false;
+
+    // Post owner can delete
+    if (
+      post.userId._id ===
+      ((user as AuthUserType)._id ?? (user as AuthUserType).id)
+    )
+      return true;
+
+    // Admins can delete any post
+    if (user.role === "admin") return true;
+
+    return false;
+  };
+
   return (
     <>
       <Head>
@@ -234,10 +267,10 @@ const PostDetail = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Back button */}
           <div className="mb-8">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center text-black hover:text-gray-700 transition-colors duration-300 font-semibold"
-            >
+                         <button
+               onClick={() => router.back()}
+               className="flex items-center text-black hover:text-gray-700 transition-colors duration-300 font-semibold cursor-pointer"
+             >
               <svg
                 className="w-5 h-5 mr-2"
                 fill="none"
@@ -317,19 +350,29 @@ const PostDetail = () => {
                     </div>
                   </div>
 
-                  {/* Resolve Button */}
-                  {canResolvePost() && (
-                    <button
-                      onClick={handleResolvePost}
-                      disabled={resolvingPost}
-                      className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-green-600 border-2 border-green-600 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-green-700 hover:bg-green-700 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <span className="relative z-10 font-bold">
+                  {/* Action Buttons */}
+                  <div className="flex space-x-4">
+                                         {/* Resolve Button */}
+                     {canResolvePost() && (
+                       <button
+                         onClick={handleResolvePost}
+                         disabled={resolvingPost}
+                         className="px-6 py-3 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                       >
                         {resolvingPost ? "Resolving..." : "Mark as Resolved"}
-                      </span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    </button>
-                  )}
+                      </button>
+                    )}
+
+                                         {/* Delete Button */}
+                     {canDeletePost() && (
+                       <button
+                         onClick={handleDeletePost}
+                         className="px-6 py-3 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer"
+                       >
+                        Delete Post
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -560,11 +603,11 @@ const PostDetail = () => {
                         required
                       />
                     </div>
-                    <button
-                      type="submit"
-                      disabled={submittingComment || !commentText.trim()}
-                      className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
+                                         <button
+                       type="submit"
+                       disabled={submittingComment || !commentText.trim()}
+                       className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                     >
                       <span className="relative z-10 font-bold">
                         {submittingComment ? "Submitting..." : "Submit Comment"}
                       </span>
@@ -637,10 +680,10 @@ const PostDetail = () => {
                 </svg>
                 <p className="text-gray-500 text-xl font-semibold mb-2">Post not found</p>
                 <p className="text-gray-500 mb-6">The post may have been removed or doesn't exist.</p>
-                <Link
-                  href="/posts"
-                  className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
-                >
+                                 <Link
+                   href="/posts"
+                   className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1 cursor-pointer"
+                 >
                   <span className="relative z-10 font-bold">Return to Posts</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </Link>
@@ -663,10 +706,10 @@ const PostDetail = () => {
               className="max-w-full max-h-full object-contain rounded-2xl"
               onClick={(e) => e.stopPropagation()}
             />
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all duration-300"
-            >
+                         <button
+               onClick={() => setSelectedImage(null)}
+               className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all duration-300 cursor-pointer"
+             >
               ×
             </button>
           </div>
