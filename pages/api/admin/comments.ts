@@ -3,12 +3,13 @@ import dbConnect from '../../../utils/db';
 import CommentController from '../../../controllers/CommentController';
 import { verifyToken } from '../../../utils/auth';
 import { adminAuth } from '../../../utils/adminAuth';
+import cookie from 'cookie';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
 
   // Verify admin authentication
-  const token = req.cookies.token;
+  const { token } = cookie.parse(req.headers.cookie || "");
   if (!token) {
     return res.status(401).json({ message: 'Authentication required' });
   }

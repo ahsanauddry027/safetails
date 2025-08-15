@@ -3,12 +3,13 @@ import dbConnect from '../../../../utils/db';
 import CommentController from '../../../../controllers/CommentController';
 import { verifyToken } from '../../../../utils/auth';
 import { adminAuth } from '../../../../utils/adminAuth';
+import cookie from 'cookie';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
 
   // Verify admin authentication
-  const token = req.cookies.token;
+  const { token } = cookie.parse(req.headers.cookie || "");
   if (!token) {
     return res.status(401).json({ message: 'Authentication required' });
   }
@@ -24,11 +25,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ message: 'Invalid token' });
   }
 
+  // Add the commentId to req.query so the controller can access it
+  req.query.commentId = req.query.id;
+
   switch (req.method) {
     case 'PUT':
       return CommentController.approveComment(req, res);
+    case 'DELETE':
+      return CommentController.deleteComment(req, res);
     default:
-      res.setHeader('Allow', ['PUT']);
+      res.setHeader('Allow', ['PUT', 'DELETE']);
       return res.status(405).json({ message: `Method ${req.method} Not Allowed` });
   }
 }

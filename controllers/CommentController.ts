@@ -245,6 +245,33 @@ class CommentController {
       });
     }
   }
+
+  // Admin: Delete comment
+  static async deleteComment(req: NextApiRequest, res: NextApiResponse) {
+    try {
+      const { commentId } = req.query;
+
+      const comment = await Comment.findByIdAndDelete(commentId);
+
+      if (!comment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Comment not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Comment deleted successfully'
+      });
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete comment'
+      });
+    }
+  }
 }
 
 export default CommentController;

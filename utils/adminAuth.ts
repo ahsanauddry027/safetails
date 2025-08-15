@@ -65,4 +65,15 @@ export const withAdminAuth = (handler: (req: AuthenticatedRequest, res: NextApiR
       return res.status(401).json({ error: "Authentication failed" });
     }
   };
+};
+
+// Simple admin auth function for checking if a user is admin
+export const adminAuth = async (userId: string): Promise<boolean> => {
+  try {
+    const user = await User.findById(userId);
+    return user?.role === "admin";
+  } catch (error) {
+    console.error("Admin auth check error:", error);
+    return false;
+  }
 }; 

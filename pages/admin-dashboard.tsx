@@ -6,6 +6,7 @@ import Link from "next/link";
 import axios from "axios";
 import Notification from "@/components/Notification";
 import CreateAdminModal from "@/components/CreateAdminModal";
+import CommentManagement from "@/components/CommentManagement";
 
 interface User {
   _id: string;
@@ -73,6 +74,7 @@ export default function AdminDashboard() {
   const [blockReason, setBlockReason] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+  const [showCommentManagement, setShowCommentManagement] = useState(false);
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -288,29 +290,36 @@ export default function AdminDashboard() {
               <h1 className="text-5xl font-bold tracking-wide mb-3 group-hover:scale-105 transition-transform duration-300 font-display">Admin Dashboard</h1>
               <p className="text-white text-opacity-90 text-xl font-body">Welcome back, <span className="text-primary">{user.name}</span></p>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowCreateAdminModal(true)}
-                className="group relative inline-flex items-center justify-center px-6 py-3 text-black bg-white border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
-              >
-                <span className="relative z-10 font-bold group-hover:text-white">Create Admin</span>
-                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </button>
-              <Link
-                href="/profile"
-                className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
-              >
-                <span className="relative z-10 font-bold">My Profile</span>
-                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Link>
-              <Link
-                href="/"
-                className="group relative inline-flex items-center justify-center px-6 py-3 text-black bg-white border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
-              >
-                <span className="relative z-10 font-bold group-hover:text-white">Home</span>
-                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Link>
-            </div>
+                         <div className="flex items-center space-x-4">
+               <button
+                 onClick={() => setShowCommentManagement(true)}
+                 className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
+               >
+                 <span className="relative z-10 font-bold">Manage Comments</span>
+                 <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+               </button>
+               <button
+                 onClick={() => setShowCreateAdminModal(true)}
+                 className="group relative inline-flex items-center justify-center px-6 py-3 text-black bg-white border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
+               >
+                 <span className="relative z-10 font-bold group-hover:text-white">Create Admin</span>
+                 <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+               </button>
+               <Link
+                 href="/profile"
+                 className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
+               >
+                 <span className="relative z-10 font-bold">My Profile</span>
+                 <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+               </Link>
+               <Link
+                 href="/"
+                 className="group relative inline-flex items-center justify-center px-6 py-3 text-black bg-white border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
+               >
+                 <span className="relative z-10 font-bold group-hover:text-white">Home</span>
+                 <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+               </Link>
+             </div>
           </div>
         </div>
       </div>
@@ -792,13 +801,19 @@ export default function AdminDashboard() {
          onError={(message) => showNotification(message, "error")}
        />
 
-       {/* Notification Component */}
-       <Notification
-         message={notification.message}
-         type={notification.type}
-         isVisible={notification.isVisible}
-         onClose={hideNotification}
-       />
-     </div>
-   );
- }
+               {/* Comment Management Modal */}
+        <CommentManagement
+          isOpen={showCommentManagement}
+          onClose={() => setShowCommentManagement(false)}
+        />
+
+        {/* Notification Component */}
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          isVisible={notification.isVisible}
+          onClose={hideNotification}
+        />
+      </div>
+    );
+  }
