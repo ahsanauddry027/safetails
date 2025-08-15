@@ -10,7 +10,12 @@ import dynamic from "next/dynamic";
 // Dynamically import LeafletMap to avoid SSR issues
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
   ssr: false,
-  loading: () => <div className="w-full h-96 bg-gray-200 rounded-md flex items-center justify-center">Loading map...</div>
+  loading: () => (
+    <div className="w-full h-96 bg-gray-200 rounded-2xl flex items-center justify-center">
+      <div className="loading-spinner"></div>
+      <p className="ml-4 text-gray-600">Loading map...</p>
+    </div>
+  )
 });
 
 const PostDetail = () => {
@@ -72,10 +77,12 @@ const PostDetail = () => {
     contactPhone?: string;
     contactEmail?: string;
     comments?: CommentType[];
+    images?: string[];
   };
 
   // State for post data
   const [post, setPost] = useState<PostType | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -174,26 +181,26 @@ const PostDetail = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "resolved":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 border-green-200";
       case "closed":
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 border-blue-200";
     }
   };
 
   const getPostTypeColor = (type: string) => {
     switch (type) {
       case "missing":
-        return "bg-red-100 text-red-800";
+        return "bg-red-100 text-red-800 border-red-200";
       case "emergency":
-        return "bg-orange-100 text-orange-800";
+        return "bg-orange-100 text-orange-800 border-orange-200";
       case "wounded":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 text-purple-800 border-purple-200";
       default:
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 border-blue-200";
     }
   };
 
@@ -222,15 +229,15 @@ const PostDetail = () => {
       </Head>
 
       <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Back button */}
-          <div className="mb-6">
+          <div className="mb-8">
             <button
               onClick={() => router.back()}
-              className="flex items-center text-blue-600 hover:text-blue-800"
+              className="flex items-center text-black hover:text-gray-700 transition-colors duration-300 font-semibold"
             >
               <svg
-                className="w-5 h-5 mr-1"
+                className="w-5 h-5 mr-2"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -249,28 +256,34 @@ const PostDetail = () => {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
-              {error}
+            <div className="mb-8 p-6 bg-red-50 border-2 border-red-200 text-red-700 rounded-2xl">
+              <div className="flex items-center">
+                <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {error}
+              </div>
             </div>
           )}
 
           {/* Loading State */}
           {loading ? (
             <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              <div className="loading-spinner"></div>
+              <p className="ml-4 text-gray-600 font-medium">Loading post...</p>
             </div>
           ) : post ? (
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-gray-200 hover:border-black transition-all duration-300">
               {/* Post Header */}
-              <div className="p-6 border-b border-gray-200">
+              <div className="p-8 border-b-2 border-gray-200">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  <div className="flex-1">
+                    <h1 className="text-4xl font-bold text-black mb-4">
                       {post.title}
                     </h1>
-                    <div className="flex items-center space-x-2 mb-4">
+                    <div className="flex items-center space-x-3 mb-6">
                       <span
-                        className={`px-2 py-1 text-xs rounded-full ${getPostTypeColor(
+                        className={`px-4 py-2 text-sm font-semibold rounded-full border ${getPostTypeColor(
                           post.postType
                         )}`}
                       >
@@ -280,7 +293,7 @@ const PostDetail = () => {
                           : "Unknown"}
                       </span>
                       <span
-                        className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
+                        className={`px-4 py-2 text-sm font-semibold rounded-full border ${getStatusColor(
                           post.status
                         )}`}
                       >
@@ -290,14 +303,14 @@ const PostDetail = () => {
                           : "Unknown"}
                       </span>
                       {post.isEmergency && (
-                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                        <span className="px-4 py-2 text-sm font-semibold rounded-full border bg-red-100 text-red-800 border-red-200">
                           Emergency
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <span>Posted by: {post.userId.name}</span>
-                      <span className="mx-2">•</span>
+                    <div className="flex items-center text-lg text-gray-600">
+                      <span>Posted by: <span className="font-semibold text-black">{post.userId.name}</span></span>
+                      <span className="mx-3">•</span>
                       <span>{formatDate(post.createdAt)}</span>
                     </div>
                   </div>
@@ -307,66 +320,118 @@ const PostDetail = () => {
                     <button
                       onClick={handleResolvePost}
                       disabled={resolvingPost}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-green-600 border-2 border-green-600 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-green-700 hover:bg-green-700 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {resolvingPost ? "Resolving..." : "Mark as Resolved"}
+                      <span className="relative z-10 font-bold">
+                        {resolvingPost ? "Resolving..." : "Mark as Resolved"}
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
                   )}
                 </div>
               </div>
 
+              {/* Images Section */}
+              {post.images && post.images.length > 0 && (
+                <div className="p-8 border-b-2 border-gray-200">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
+                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Pet Photos
+                  </h2>
+                  
+                  {/* Main Image */}
+                  <div className="mb-6">
+                    <img
+                      src={selectedImage || post.images[0]}
+                      alt={`${post.petName} photo`}
+                      className="w-full h-96 object-cover rounded-2xl border-2 border-gray-200 hover:border-black transition-all duration-300 cursor-pointer"
+                      onClick={() => setSelectedImage(selectedImage || post.images[0])}
+                    />
+                  </div>
+
+                  {/* Thumbnail Gallery */}
+                  {post.images.length > 1 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {post.images.map((image, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={image}
+                            alt={`${post.petName} photo ${index + 1}`}
+                            className={`w-full h-24 object-cover rounded-xl border-2 cursor-pointer transition-all duration-300 ${
+                              (selectedImage || post.images[0]) === image
+                                ? 'border-black'
+                                : 'border-gray-200 group-hover:border-black'
+                            }`}
+                            onClick={() => setSelectedImage(image)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Pet Information */}
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              <div className="p-8 border-b-2 border-gray-200">
+                <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                   Pet Information
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Name:</span> {post.petName}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Type:</span> {post.petType}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Breed:</span>{" "}
-                      {post.petBreed || "Not specified"}
-                    </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Name</p>
+                    <p className="text-black font-semibold text-lg">{post.petName}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Age:</span>{" "}
-                      {post.petAge || "Not specified"}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Gender:</span>{" "}
-                      {post.petGender || "Not specified"}
-                    </p>
-                    <p className="text-gray-600">
-                      <span className="font-medium">Color:</span>{" "}
-                      {post.petColor || "Not specified"}
-                    </p>
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Type</p>
+                    <p className="text-black font-semibold text-lg">{post.petType}</p>
+                  </div>
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Breed</p>
+                    <p className="text-black font-semibold text-lg">{post.petBreed || "Not specified"}</p>
+                  </div>
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Age</p>
+                    <p className="text-black font-semibold text-lg">{post.petAge || "Not specified"}</p>
+                  </div>
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Gender</p>
+                    <p className="text-black font-semibold text-lg">{post.petGender || "Not specified"}</p>
+                  </div>
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Color</p>
+                    <p className="text-black font-semibold text-lg">{post.petColor || "Not specified"}</p>
                   </div>
                 </div>
               </div>
 
               {/* Description */}
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              <div className="p-8 border-b-2 border-gray-200">
+                <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
                   Description
                 </h2>
-                <p className="text-gray-600 whitespace-pre-line">
+                <p className="text-gray-600 text-lg leading-relaxed whitespace-pre-line">
                   {post.description}
                 </p>
               </div>
 
               {/* Last Seen Date (for missing pets) */}
               {post.postType === "missing" && post.lastSeenDate && (
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                <div className="p-8 border-b-2 border-gray-200">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
+                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     Last Seen
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 text-lg">
                     {formatDate(post.lastSeenDate)}
                   </p>
                 </div>
@@ -374,17 +439,21 @@ const PostDetail = () => {
 
               {/* Location */}
               {post.location && post.location.coordinates && (
-                <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                <div className="p-8 border-b-2 border-gray-200">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
+                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                     Location
                   </h2>
                   {post.location.address && (
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-gray-600 text-lg mb-4">
                       {post.location.address}
                     </p>
                   )}
                   {post.location.description && (
-                    <p className="text-gray-600 mb-4">
+                    <p className="text-gray-600 text-lg mb-6">
                       {post.location.description}
                     </p>
                   )}
@@ -392,7 +461,7 @@ const PostDetail = () => {
                   {/* Leaflet Map */}
                   <div
                     style={mapContainerStyle}
-                    className="rounded-md overflow-hidden"
+                    className="rounded-2xl overflow-hidden border-2 border-gray-200"
                   >
                     <LeafletMap
                       center={{
@@ -407,37 +476,45 @@ const PostDetail = () => {
               )}
 
               {/* Contact Information */}
-              <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              <div className="p-8 border-b-2 border-gray-200">
+                <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
                   Contact Information
                 </h2>
-                <p className="text-gray-600">
-                  <span className="font-medium">Name:</span>{" "}
-                  {post.contactName || post.userId.name}
-                </p>
-                <p className="text-gray-600">
-                  <span className="font-medium">Phone:</span>{" "}
-                  {post.contactPhone || post.userId.phone || "Not provided"}
-                </p>
-                <p className="text-gray-600">
-                  <span className="font-medium">Email:</span>{" "}
-                  {post.contactEmail || post.userId.email}
-                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Name</p>
+                    <p className="text-black font-semibold text-lg">{post.contactName || post.userId.name}</p>
+                  </div>
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Phone</p>
+                    <p className="text-black font-semibold text-lg">{post.contactPhone || post.userId.phone || "Not provided"}</p>
+                  </div>
+                  <div className="bg-gray-50 p-6 rounded-2xl">
+                    <p className="text-gray-600 mb-1 font-medium">Email</p>
+                    <p className="text-black font-semibold text-lg">{post.contactEmail || post.userId.email}</p>
+                  </div>
+                </div>
               </div>
 
               {/* Comments */}
-              <div className="p-6">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              <div className="p-8">
+                <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
                   Comments ({post.comments?.length || 0})
                 </h2>
 
                 {/* Comment Form */}
                 {user && post.status === "active" && (
-                  <form onSubmit={handleCommentSubmit} className="mb-6">
+                  <form onSubmit={handleCommentSubmit} className="mb-8">
                     <div className="mb-4">
                       <label
                         htmlFor="comment"
-                        className="block text-gray-700 font-medium mb-2"
+                        className="block text-lg font-semibold text-gray-700 mb-3"
                       >
                         Add a comment
                       </label>
@@ -446,8 +523,8 @@ const PostDetail = () => {
                         ref={commentInputRef}
                         value={commentText}
                         onChange={(e) => setCommentText(e.target.value)}
-                        rows={3}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={4}
+                        className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                         placeholder="Write your comment here..."
                         required
                       />
@@ -455,79 +532,115 @@ const PostDetail = () => {
                     <button
                       type="submit"
                       disabled={submittingComment || !commentText.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {submittingComment ? "Submitting..." : "Submit Comment"}
+                      <span className="relative z-10 font-bold">
+                        {submittingComment ? "Submitting..." : "Submit Comment"}
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     </button>
                   </form>
                 )}
 
                 {/* Comments List */}
                 {post.comments && post.comments.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {post.comments.map((comment, index) => (
-                      <div key={index} className="bg-gray-50 p-4 rounded-md">
-                        <div className="flex justify-between items-start mb-2">
+                      <div key={index} className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-200 hover:border-black transition-all duration-300">
+                        <div className="flex justify-between items-start mb-4">
                           <div className="flex items-center">
                             {comment.user.profileImage ? (
                               <img
                                 src={comment.user.profileImage}
                                 alt={comment?.user?.name?.charAt(0) ?? "?"}
-                                className="w-8 h-8 rounded-full object-cover mr-3"
+                                className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-gray-200"
                               />
                             ) : (
-                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                                <span className="text-gray-500">
+                              <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-4 border-2 border-gray-200">
+                                <span className="text-gray-500 font-semibold">
                                   {comment?.user?.name?.charAt(0) ?? "?"}
                                 </span>
                               </div>
                             )}
                             <div>
-                              <p className="font-medium text-gray-900">
+                              <p className="font-semibold text-black text-lg">
                                 {comment?.user?.name ?? "?"}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-sm text-gray-500">
                                 {formatDate(comment.createdAt)}
                               </p>
                             </div>
                           </div>
                           {comment.user.role === "vet" && (
-                            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                            <span className="px-3 py-1 text-sm font-semibold rounded-full border bg-blue-100 text-blue-800 border-blue-200">
                               Vet
                             </span>
                           )}
                           {comment.user.role === "admin" && (
-                            <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                            <span className="px-3 py-1 text-sm font-semibold rounded-full border bg-purple-100 text-purple-800 border-purple-200">
                               Admin
                             </span>
                           )}
                         </div>
-                        <p className="text-gray-600 whitespace-pre-line">
+                        <p className="text-gray-600 text-lg leading-relaxed whitespace-pre-line">
                           {comment.text}
                         </p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No comments yet.</p>
+                  <div className="text-center py-8">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <p className="text-gray-500 text-lg">No comments yet.</p>
+                  </div>
                 )}
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <p className="text-gray-500 text-lg">
-                Post not found or has been removed.
-              </p>
-              <Link
-                href="/posts"
-                className="mt-4 inline-block text-blue-600 hover:text-blue-800"
-              >
-                Return to Posts
-              </Link>
+            <div className="bg-white rounded-3xl shadow-2xl p-12 text-center border-4 border-gray-200">
+              <div className="flex flex-col items-center">
+                <svg className="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33" />
+                </svg>
+                <p className="text-gray-500 text-xl font-semibold mb-2">Post not found</p>
+                <p className="text-gray-500 mb-6">The post may have been removed or doesn't exist.</p>
+                <Link
+                  href="/posts"
+                  className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
+                >
+                  <span className="relative z-10 font-bold">Return to Posts</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                </Link>
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-full">
+            <img
+              src={selectedImage}
+              alt="Pet photo"
+              className="max-w-full max-h-full object-contain rounded-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-4 right-4 bg-black bg-opacity-50 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-75 transition-all duration-300"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 };

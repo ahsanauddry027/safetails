@@ -1,5 +1,5 @@
 // pages/create-post.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
@@ -10,8 +10,9 @@ import dynamic from "next/dynamic";
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-96 bg-gray-200 rounded-md flex items-center justify-center">
-      Loading map...
+    <div className="w-full h-96 bg-gray-200 rounded-2xl flex items-center justify-center">
+      <div className="loading-spinner"></div>
+      <p className="ml-4 text-gray-600">Loading map...</p>
     </div>
   ),
 });
@@ -40,6 +41,7 @@ interface FormData {
   contactPhone: string;
   contactEmail: string;
   lastSeenDate: string;
+  images: string[];
 }
 
 interface LocationData {
@@ -51,6 +53,7 @@ interface LocationData {
 const CreatePost = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -66,6 +69,7 @@ const CreatePost = () => {
     contactPhone: "",
     contactEmail: "",
     lastSeenDate: "",
+    images: [],
   });
 
   // Location state
@@ -82,6 +86,7 @@ const CreatePost = () => {
     lat: number;
     lng: number;
   } | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Redirect if not logged in
   useEffect(() => {
@@ -120,6 +125,70 @@ const CreatePost = () => {
       ...formData,
       [name]: value,
     });
+  };
+
+  // Handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImage(true);
+    setError("");
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          setError("Please select only image files.");
+          continue;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          setError("Image size must be less than 5MB.");
+          continue;
+        }
+
+        // Convert to base64
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64Image = event.target?.result as string;
+          
+          try {
+            // Upload image
+            const response = await axios.post("/api/upload-image", {
+              image: base64Image
+            });
+
+            if (response.data.success) {
+              setFormData(prev => ({
+                ...prev,
+                images: [...prev.images, response.data.imageUrl]
+              }));
+            }
+          } catch (err) {
+            console.error("Error uploading image:", err);
+            setError("Failed to upload image. Please try again.");
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) {
+      console.error("Error processing image:", err);
+      setError("Failed to process image. Please try again.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Remove image
+  const removeImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
   };
 
   // Handle map click to set location
@@ -181,8 +250,9 @@ const CreatePost = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="loading-spinner"></div>
+        <p className="ml-4 text-gray-600 font-medium">Loading...</p>
       </div>
     );
   }
@@ -194,24 +264,24 @@ const CreatePost = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 border-4 border-gray-200 hover:border-black transition-all duration-300">
+          <h1 className="text-4xl font-bold text-black mb-8 text-center">
             Create Pet Post
           </h1>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+            <div className="mb-8 p-4 bg-red-50 border-2 border-red-200 text-red-700 rounded-2xl">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Post Type Selection */}
-            <div className="mb-6">
-              <label className="block text-gray-700 font-medium mb-2">
+            <div>
+              <label className="block text-xl font-semibold text-gray-700 mb-4">
                 Post Type *
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {["missing", "emergency", "wounded", "vet-consultant"].map((type) => (
                   <div key={type} className="relative">
                     <input
@@ -231,11 +301,11 @@ const CreatePost = () => {
                     />
                     <label
                       htmlFor={`type-${type}`}
-                      className={`block w-full p-4 text-center rounded-lg border ${
+                      className={`block w-full p-4 text-center rounded-2xl border-2 transition-all duration-300 cursor-pointer ${
                         formData.postType === type
-                          ? "bg-blue-50 border-blue-500 text-blue-700"
-                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                      } cursor-pointer transition-colors`}
+                          ? "bg-black border-black text-white"
+                          : "bg-white border-gray-300 text-gray-700 hover:border-black hover:bg-gray-50"
+                      }`}
                     >
                       {type === "vet-consultant" ? "Vet Consultant" : type.charAt(0).toUpperCase() + type.slice(1) + " Pet"}
                     </label>
@@ -244,12 +314,73 @@ const CreatePost = () => {
               </div>
             </div>
 
+            {/* Image Upload */}
+            <div>
+              <label className="block text-xl font-semibold text-gray-700 mb-4">
+                Pet Photos
+              </label>
+              <div className="space-y-4">
+                {/* Image Upload Button */}
+                <div className="relative">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploadingImage}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="w-full p-6 border-2 border-dashed border-gray-300 rounded-2xl hover:border-black transition-all duration-300 text-center group"
+                  >
+                    <div className="flex flex-col items-center">
+                      <svg className="w-12 h-12 text-gray-400 group-hover:text-black transition-colors duration-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">
+                        {uploadingImage ? "Uploading..." : "Click to upload pet photos"}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-2">
+                        Upload up to 5 images (max 5MB each)
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Display Uploaded Images */}
+                {formData.images.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {formData.images.map((image, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={image}
+                          alt={`Pet photo ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-2xl border-2 border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Basic Information */}
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label
                   htmlFor="title"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Post Title *
                 </label>
@@ -259,7 +390,7 @@ const CreatePost = () => {
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   required
                   placeholder="E.g., Missing Golden Retriever in Central Park"
                 />
@@ -268,7 +399,7 @@ const CreatePost = () => {
               <div>
                 <label
                   htmlFor="petName"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Pet Name *
                 </label>
@@ -278,7 +409,7 @@ const CreatePost = () => {
                   name="petName"
                   value={formData.petName}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   required
                   placeholder="Pet's name"
                 />
@@ -286,11 +417,11 @@ const CreatePost = () => {
             </div>
 
             {/* Pet Details */}
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label
                   htmlFor="petType"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Pet Type *
                 </label>
@@ -300,7 +431,7 @@ const CreatePost = () => {
                   name="petType"
                   value={formData.petType}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   required
                   placeholder="E.g., Dog, Cat, Bird"
                 />
@@ -309,7 +440,7 @@ const CreatePost = () => {
               <div>
                 <label
                   htmlFor="petBreed"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Breed
                 </label>
@@ -319,7 +450,7 @@ const CreatePost = () => {
                   name="petBreed"
                   value={formData.petBreed}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   placeholder="E.g., Golden Retriever, Siamese"
                 />
               </div>
@@ -327,7 +458,7 @@ const CreatePost = () => {
               <div>
                 <label
                   htmlFor="petAge"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Age
                 </label>
@@ -337,17 +468,17 @@ const CreatePost = () => {
                   name="petAge"
                   value={formData.petAge}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   placeholder="E.g., 2 years, 6 months"
                 />
               </div>
             </div>
 
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label
                   htmlFor="petGender"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Gender
                 </label>
@@ -356,7 +487,7 @@ const CreatePost = () => {
                   name="petGender"
                   value={formData.petGender}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                 >
                   <option value="unknown">Unknown</option>
                   <option value="male">Male</option>
@@ -367,7 +498,7 @@ const CreatePost = () => {
               <div>
                 <label
                   htmlFor="petColor"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Color
                 </label>
@@ -377,17 +508,17 @@ const CreatePost = () => {
                   name="petColor"
                   value={formData.petColor}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   placeholder="E.g., Golden, Black and White"
                 />
               </div>
             </div>
 
             {/* Description */}
-            <div className="mb-6">
+            <div>
               <label
                 htmlFor="description"
-                className="block text-gray-700 font-medium mb-2"
+                className="block text-lg font-semibold text-gray-700 mb-2"
               >
                 Description *
               </label>
@@ -397,7 +528,7 @@ const CreatePost = () => {
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                 required
                 placeholder="Provide details about the pet and the situation"
               ></textarea>
@@ -405,10 +536,10 @@ const CreatePost = () => {
 
             {/* Last Seen Date (for missing pets) */}
             {formData.postType === "missing" && (
-              <div className="mb-6">
+              <div>
                 <label
                   htmlFor="lastSeenDate"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Last Seen Date *
                 </label>
@@ -418,18 +549,18 @@ const CreatePost = () => {
                   name="lastSeenDate"
                   value={formData.lastSeenDate}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   required
                 />
               </div>
             )}
 
             {/* Contact Information */}
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label
                   htmlFor="contactPhone"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Contact Phone
                 </label>
@@ -439,7 +570,7 @@ const CreatePost = () => {
                   name="contactPhone"
                   value={formData.contactPhone}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   placeholder="Your contact phone number"
                 />
               </div>
@@ -447,7 +578,7 @@ const CreatePost = () => {
               <div>
                 <label
                   htmlFor="contactEmail"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Contact Email
                 </label>
@@ -457,25 +588,25 @@ const CreatePost = () => {
                   name="contactEmail"
                   value={formData.contactEmail}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   placeholder="Your contact email"
                 />
               </div>
             </div>
 
             {/* Location Map */}
-            <div className="mb-6">
-              <label className="block text-gray-700 font-medium mb-2">
+            <div>
+              <label className="block text-lg font-semibold text-gray-700 mb-2">
                 Location *
               </label>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-gray-600 mb-4">
                 Click on the map to set the location where the pet was last seen
                 or found.
               </p>
 
               <div
                 style={mapContainerStyle}
-                className="rounded-md overflow-hidden"
+                className="rounded-2xl overflow-hidden border-2 border-gray-300"
               >
                 <LeafletMap
                   center={userLocation || defaultCenter}
@@ -490,7 +621,7 @@ const CreatePost = () => {
               <div className="mt-4">
                 <label
                   htmlFor="locationDescription"
-                  className="block text-gray-700 font-medium mb-2"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
                 >
                   Location Description
                 </label>
@@ -499,7 +630,7 @@ const CreatePost = () => {
                   value={location.description}
                   onChange={handleLocationDescChange}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
                   placeholder="E.g., Near the playground in Central Park"
                 ></textarea>
               </div>
@@ -509,15 +640,15 @@ const CreatePost = () => {
             <div className="flex justify-end space-x-4">
               <Link
                 href="/"
-                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-8 py-4 border-2 border-gray-300 rounded-2xl text-gray-700 hover:border-black hover:bg-gray-50 transition-all duration-300 text-lg font-semibold"
               >
                 Cancel
               </Link>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${
-                  isSubmitting ? "opacity-70 cursor-not-allowed" : ""
+                className={`px-8 py-4 bg-black text-white rounded-2xl transition-all duration-300 text-lg font-bold transform hover:scale-105 hover:shadow-2xl ${
+                  isSubmitting ? "opacity-70 cursor-not-allowed" : "hover:bg-gray-800"
                 }`}
               >
                 {isSubmitting ? "Creating..." : "Create Post"}

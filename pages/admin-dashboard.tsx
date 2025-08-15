@@ -136,23 +136,32 @@ export default function AdminDashboard() {
     }
   };
   
-  // Quick Actions Section to add to the dashboard
+  // Enhanced Quick Actions Section
   const renderQuickActions = () => {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Link href="/admin/posts" className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 text-center">
-            Manage Pet Posts
+      <div className="group bg-white rounded-3xl shadow-2xl p-8 mb-12 border-4 border-gray-200 hover:border-black transition-all duration-300">
+        <h2 className="text-3xl font-bold text-black mb-8 flex items-center group-hover:text-primary transition-colors duration-300">
+          <svg className="w-8 h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Link href="/admin/posts" className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1">
+            <span className="relative z-10 font-bold">Manage Pet Posts</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </Link>
-          <Link href="/posts" className="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 text-center">
-            View All Posts
+          <Link href="/posts" className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1">
+            <span className="relative z-10 font-bold">View All Posts</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </Link>
-          <Link href="/posts?postType=emergency" className="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 text-center">
-            Emergency Posts
+          <Link href="/posts?postType=emergency" className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1">
+            <span className="relative z-10 font-bold">Emergency Posts</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </Link>
-          <Link href="/posts?postType=missing" className="bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-3 px-4 rounded-md transition duration-200 text-center">
-            Missing Pet Posts
+          <Link href="/posts?postType=missing" className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1">
+            <span className="relative z-10 font-bold">Missing Pet Posts</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </Link>
         </div>
       </div>
@@ -204,8 +213,9 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="loading-spinner"></div>
+        <p className="ml-4 text-gray-600 font-medium">Loading dashboard...</p>
       </div>
     );
   }
@@ -235,32 +245,36 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 via-red-500 to-yellow-500 text-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Enhanced Header */}
+      <div className="bg-gradient-to-r from-black via-gray-800 to-black text-white shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-white/5"></div>
+        <div className="max-w-7xl mx-auto px-4 py-12 relative">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold tracking-wide mb-2">Admin Dashboard</h1>
-              <p className="text-white text-opacity-80">Welcome back, {user.name}</p>
+            <div className="group">
+              <h1 className="text-5xl font-bold tracking-wide mb-3 group-hover:scale-105 transition-transform duration-300">Admin Dashboard</h1>
+              <p className="text-white text-opacity-90 text-xl">Welcome back, <span className="text-primary">{user.name}</span></p>
             </div>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setShowCreateAdminModal(true)}
-                className="bg-white text-red-600 hover:bg-red-100 px-4 py-2 rounded-md transition duration-200 font-medium"
+                className="group relative inline-flex items-center justify-center px-6 py-3 text-black bg-white border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
               >
-                Create Admin
+                <span className="relative z-10 font-bold group-hover:text-white">Create Admin</span>
+                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
               <Link
                 href="/profile"
-                className="bg-red-700 hover:bg-red-800 px-4 py-2 rounded-md transition duration-200"
+                className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
               >
-                My Profile
+                <span className="relative z-10 font-bold">My Profile</span>
+                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
               <Link
                 href="/"
-                className="bg-red-700 hover:bg-red-800 px-4 py-2 rounded-md transition duration-200"
+                className="group relative inline-flex items-center justify-center px-6 py-3 text-black bg-white border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
               >
-                Home
+                <span className="relative z-10 font-bold group-hover:text-white">Home</span>
+                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
             </div>
           </div>
@@ -268,75 +282,80 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* User Stats Cards */}
-        <h2 className="text-xl font-bold text-gray-800 mb-4">User Statistics</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-md p-6">
+        {/* Enhanced User Stats Cards */}
+        <h2 className="text-3xl font-bold text-black mb-8 flex items-center">
+          <svg className="w-8 h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+          </svg>
+          User Statistics
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+          <div className="group bg-white rounded-3xl shadow-lg p-8 border-4 border-gray-200 hover:border-black transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-4 bg-black rounded-full group-hover:scale-110 transition-all duration-300 shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalUsers}</p>
+              <div className="ml-6">
+                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">Total Users</p>
+                <p className="text-4xl font-bold text-black">{stats.totalUsers}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="group bg-white rounded-3xl shadow-lg p-8 border-4 border-gray-200 hover:border-black transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-full">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-4 bg-black rounded-full group-hover:scale-110 transition-all duration-300 shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Veterinarians</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalVets}</p>
+              <div className="ml-6">
+                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">Veterinarians</p>
+                <p className="text-4xl font-bold text-black">{stats.totalVets}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="group bg-white rounded-3xl shadow-lg p-8 border-4 border-gray-200 hover:border-black transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <div className="flex items-center">
-              <div className="p-3 bg-red-100 rounded-full">
-                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-4 bg-black rounded-full group-hover:scale-110 transition-all duration-300 shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Administrators</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalAdmins}</p>
+              <div className="ml-6">
+                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">Administrators</p>
+                <p className="text-4xl font-bold text-black">{stats.totalAdmins}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="group bg-white rounded-3xl shadow-lg p-8 border-4 border-gray-200 hover:border-black transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <div className="flex items-center">
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-4 bg-black rounded-full group-hover:scale-110 transition-all duration-300 shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalActive}</p>
+              <div className="ml-6">
+                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">Active Users</p>
+                <p className="text-4xl font-bold text-black">{stats.totalActive}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="group bg-white rounded-3xl shadow-lg p-8 border-4 border-gray-200 hover:border-black transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <div className="flex items-center">
-              <div className="p-3 bg-orange-100 rounded-full">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-4 bg-black rounded-full group-hover:scale-110 transition-all duration-300 shadow-lg">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
                 </svg>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Blocked Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalBlocked}</p>
+              <div className="ml-6">
+                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">Blocked Users</p>
+                <p className="text-4xl font-bold text-black">{stats.totalBlocked}</p>
               </div>
             </div>
           </div>

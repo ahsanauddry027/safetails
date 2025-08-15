@@ -16,8 +16,9 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="loading-spinner"></div>
+        <p className="ml-4 text-gray-600 font-medium">Loading profile...</p>
       </div>
     );
   }
@@ -29,9 +30,9 @@ export default function ProfilePage() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case "vet":
-        return "bg-blue-100 text-blue-800";
+        return "bg-black text-white";
       case "admin":
-        return "bg-red-100 text-red-800";
+        return "bg-black text-white";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -39,109 +40,142 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 px-6 py-8">
-            <div className="flex items-center space-x-4">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-2xl font-bold text-yellow-600">
-                {user.name.charAt(0).toUpperCase()}
+      <div className="max-w-5xl mx-auto px-4">
+        {/* Enhanced Profile Card */}
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-gray-200 hover:border-black transition-all duration-300 animate-fade-in">
+          {/* Enhanced Header */}
+          <div className="bg-gradient-to-r from-black via-gray-800 to-black px-8 py-12 relative overflow-hidden">
+            <div className="absolute inset-0 bg-white/5"></div>
+            <div className="relative flex items-center space-x-6">
+              <div className="group relative">
+                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-3xl font-bold text-black shadow-2xl group-hover:scale-110 transition-all duration-300 border-4 border-white">
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="absolute inset-0 rounded-full border-4 border-white/20 group-hover:border-white/40 transition-all duration-300"></div>
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white">{user.name}</h1>
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(user.role)}`}>
+              <div className="flex-1">
+                <h1 className="text-4xl font-bold text-white mb-2 group-hover:scale-105 transition-transform duration-300">
+                  {user.name}
+                </h1>
+                <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${getRoleBadgeColor(user.role)} shadow-lg hover:scale-105 transition-all duration-300`}>
+                  <span className="mr-2">
+                    {user.role === "vet" ? "🏥" : user.role === "admin" ? "👑" : "👤"}
+                  </span>
                   {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Profile Content */}
-          <div className="p-6">
-            <div className="grid md:grid-cols-2 gap-8">
+          {/* Enhanced Profile Content */}
+          <div className="p-8">
+            <div className="grid lg:grid-cols-2 gap-12">
               {/* Personal Information */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4 text-gray-800">Personal Information</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Email</label>
-                    <p className="text-gray-800">{user.email}</p>
+              <div className="group">
+                <h2 className="text-2xl font-bold mb-6 text-black flex items-center group-hover:text-primary transition-colors duration-300">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Personal Information
+                </h2>
+                <div className="space-y-6">
+                  <div className="group/item bg-gray-50 p-6 rounded-2xl hover:bg-gray-100 transition-all duration-300 hover:shadow-lg border-2 border-transparent hover:border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-600 mb-2">Email</label>
+                    <p className="text-lg text-black font-medium">{user.email}</p>
                   </div>
                   
                   {user.phone && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600">Phone</label>
-                      <p className="text-gray-800">{user.phone}</p>
+                    <div className="group/item bg-gray-50 p-6 rounded-2xl hover:bg-gray-100 transition-all duration-300 hover:shadow-lg border-2 border-transparent hover:border-gray-200">
+                      <label className="block text-sm font-semibold text-gray-600 mb-2">Phone</label>
+                      <p className="text-lg text-black font-medium">{user.phone}</p>
                     </div>
                   )}
                   
                   {user.address && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600">Address</label>
-                      <p className="text-gray-800">{user.address}</p>
+                    <div className="group/item bg-gray-50 p-6 rounded-2xl hover:bg-gray-100 transition-all duration-300 hover:shadow-lg border-2 border-transparent hover:border-gray-200">
+                      <label className="block text-sm font-semibold text-gray-600 mb-2">Address</label>
+                      <p className="text-lg text-black font-medium">{user.address}</p>
                     </div>
                   )}
                   
                   {user.bio && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-600">Bio</label>
-                      <p className="text-gray-800">{user.bio}</p>
+                    <div className="group/item bg-gray-50 p-6 rounded-2xl hover:bg-gray-100 transition-all duration-300 hover:shadow-lg border-2 border-transparent hover:border-gray-200">
+                      <label className="block text-sm font-semibold text-gray-600 mb-2">Bio</label>
+                      <p className="text-lg text-black font-medium leading-relaxed">{user.bio}</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Account Information */}
-              <div>
-                <h2 className="text-xl font-semibold mb-4 text-gray-800">Account Information</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Member Since</label>
-                    <p className="text-gray-800">
-                      {new Date().toLocaleDateString()} {/* You can add createdAt to user model */}
+              <div className="group">
+                <h2 className="text-2xl font-bold mb-6 text-black flex items-center group-hover:text-primary transition-colors duration-300">
+                  <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Account Information
+                </h2>
+                <div className="space-y-6">
+                  <div className="group/item bg-gray-50 p-6 rounded-2xl hover:bg-gray-100 transition-all duration-300 hover:shadow-lg border-2 border-transparent hover:border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-600 mb-2">Member Since</label>
+                    <p className="text-lg text-black font-medium">
+                      {new Date().toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
                     </p>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600">Account Status</label>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <div className="group/item bg-gray-50 p-6 rounded-2xl hover:bg-gray-100 transition-all duration-300 hover:shadow-lg border-2 border-transparent hover:border-gray-200">
+                    <label className="block text-sm font-semibold text-gray-600 mb-2">Account Status</label>
+                    <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold bg-green-100 text-green-800 hover:bg-green-200 transition-colors duration-300">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
                       Active
                     </span>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="mt-8 space-y-3">
+                {/* Enhanced Action Buttons */}
+                <div className="mt-8 space-y-4">
                   <Link
                     href="/edit-profile"
-                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center block"
+                    className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
                   >
-                    Edit Profile
+                    <span className="relative z-10 font-bold text-lg">Edit Profile</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                   </Link>
                   
                   {user.role === "vet" && (
                     <Link
                       href="/vet-dashboard"
-                      className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center block"
+                      className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
                     >
-                      Vet Dashboard
+                      <span className="relative z-10 font-bold text-lg">Vet Dashboard</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                     </Link>
                   )}
                   
                   {user.role === "admin" && (
                     <Link
                       href="/admin-dashboard"
-                      className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center block"
+                      className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
                     >
-                      Admin Panel
+                      <span className="relative z-10 font-bold text-lg">Admin Panel</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                     </Link>
                   )}
                   
                   <Link
                     href="/delete-profile"
-                    className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-md transition duration-200 text-center block"
+                    className="group relative block w-full text-center px-6 py-4 text-white bg-red-600 border-2 border-red-600 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-red-700 hover:bg-red-700 transform hover:-translate-y-1"
                   >
-                    Delete Profile
+                    <span className="relative z-10 font-bold text-lg">Delete Profile</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-700 to-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                   </Link>
                 </div>
               </div>

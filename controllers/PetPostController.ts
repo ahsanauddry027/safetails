@@ -15,6 +15,7 @@ interface PostData {
   contactPhone?: string;
   contactEmail?: string;
   lastSeenDate?: string;
+  images?: string[];
   location?: {
     coordinates: [number, number];
     address?: string;
