@@ -5,12 +5,50 @@ import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import Link from "next/link";
 
+interface Post {
+  _id: string;
+  title: string;
+  postType: string;
+  petName: string;
+  petType: string;
+  petBreed?: string;
+  petAge?: string;
+  petGender?: string;
+  petColor?: string;
+  petCategory?: string;
+  description: string;
+  images: string[];
+  location: {
+    coordinates: [number, number];
+    address?: string;
+    description?: string;
+    city?: string;
+    state?: string;
+  };
+  city?: string;
+  state?: string;
+  status: string;
+  isEmergency: boolean;
+  lastSeenDate?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  views: number;
+  userId: {
+    _id: string;
+    name: string;
+    email: string;
+    profileImage?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 const Posts = () => {
   const { user } = useAuth();
   const router = useRouter();
   
   // State for posts data
-  const [posts, setPosts] = useState([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [totalPosts, setTotalPosts] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -18,26 +56,39 @@ const Posts = () => {
   // State for filtering
   const [filters, setFilters] = useState({
     postType: "",
-    status: "active"
+    status: "active",
+    petType: "",
+    petCategory: "",
+    city: "",
+    state: "",
+    isEmergency: false,
+    dateRange: ""
   });
   
   // UI state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   
   // Fetch posts when component mounts or filters change
   useEffect(() => {
     fetchPosts();
-  }, [currentPage, filters]);
+  }, [currentPage, filters, searchTerm]);
   
   // Handle query params from URL
   useEffect(() => {
-    const { postType, status, page, deleted } = router.query;
+    const { postType, status, petType, petCategory, city, state, isEmergency, dateRange, page, deleted } = router.query;
     
     const newFilters = { ...filters };
     if (postType) newFilters.postType = postType as string;
     if (status) newFilters.status = status as string;
+    if (petType) newFilters.petType = petType as string;
+    if (petCategory) newFilters.petCategory = petCategory as string;
+    if (city) newFilters.city = city as string;
+    if (state) newFilters.state = state as string;
+    if (isEmergency !== undefined) newFilters.isEmergency = isEmergency === "true";
+    if (dateRange) newFilters.dateRange = dateRange as string;
     setFilters(newFilters);
     
     if (page) setCurrentPage(parseInt(page as string));
@@ -64,15 +115,22 @@ const Posts = () => {
     try {
       // Build query params
       const params = new URLSearchParams();
+      if (searchTerm) params.append("search", searchTerm);
       if (filters.postType) params.append("postType", filters.postType);
       if (filters.status) params.append("status", filters.status);
+      if (filters.petType) params.append("petType", filters.petType);
+      if (filters.petCategory) params.append("petCategory", filters.petCategory);
+      if (filters.city) params.append("city", filters.city);
+      if (filters.state) params.append("state", filters.state);
+      if (filters.isEmergency) params.append("isEmergency", "true");
+      if (filters.dateRange) params.append("dateRange", filters.dateRange);
       params.append("page", currentPage.toString());
       params.append("limit", "10");
       
-      // Fetch posts
-      const response = await axios.get(`/api/posts?${params.toString()}`);
+      // Use search API for better filtering
+      const response = await axios.get(`/api/posts/search?${params.toString()}`);
       
-      setPosts(response.data.posts);
+      setPosts(response.data.data);
       setTotalPosts(response.data.total);
       setTotalPages(response.data.totalPages);
     } catch (err) {
@@ -84,20 +142,43 @@ const Posts = () => {
   };
   
   // Handle filter changes
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value, type } = e.target;
     setFilters({
       ...filters,
-      [name]: value
+      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value
     });
     setCurrentPage(1); // Reset to first page when filters change
     
     // Update URL with new filters
     const newQuery = { ...router.query, [name]: value, page: "1" };
-    if (!value) delete newQuery[name];
+    if (!value && type !== "checkbox") delete newQuery[name];
     router.push({
       pathname: router.pathname,
       query: newQuery
+    }, undefined, { shallow: true });
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    const clearedFilters = {
+      postType: "",
+      status: "active",
+      petType: "",
+      petCategory: "",
+      city: "",
+      state: "",
+      isEmergency: false,
+      dateRange: ""
+    };
+    setFilters(clearedFilters);
+    setCurrentPage(1);
+    setSearchTerm(""); // Clear search term
+    
+    // Clear URL query params
+    router.push({
+      pathname: router.pathname,
+      query: { page: "1" }
     }, undefined, { shallow: true });
   };
   
@@ -171,15 +252,52 @@ const Posts = () => {
           )}
         </div>
         
-        {/* Filters */}
+        {/* Enhanced Filters */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8 border-4 border-gray-200 hover:border-black transition-all duration-300">
-          <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
-            <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            Filters
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-black flex items-center">
+              <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Advanced Filters
+            </h2>
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border-2 border-gray-300 rounded-xl hover:bg-gray-200 hover:border-gray-400 transition-all duration-300"
+            >
+              Clear All Filters
+            </button>
+          </div>
+
+          {/* Search Input */}
+          <div className="mb-6">
+            <label htmlFor="search" className="block text-lg font-semibold text-gray-700 mb-3">
+              Search Posts
+            </label>
+            <div className="flex gap-4">
+              <input
+                type="text"
+                id="search"
+                name="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by title, description, pet name, breed, or location..."
+                className="flex-1 p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage(1);
+                  fetchPosts();
+                }}
+                className="px-8 py-4 bg-black text-white rounded-2xl hover:bg-gray-800 transition-all duration-300 font-semibold"
+              >
+                Search
+              </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div>
               <label htmlFor="postType" className="block text-lg font-semibold text-gray-700 mb-3">
                 Post Type
@@ -214,6 +332,117 @@ const Posts = () => {
                 <option value="resolved">Resolved</option>
                 <option value="closed">Closed</option>
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="petType" className="block text-lg font-semibold text-gray-700 mb-3">
+                Pet Type
+              </label>
+              <select
+                id="petType"
+                name="petType"
+                value={filters.petType}
+                onChange={handleFilterChange}
+                className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+              >
+                <option value="">All Pets</option>
+                <option value="dog">Dog</option>
+                <option value="cat">Cat</option>
+                <option value="bird">Bird</option>
+                <option value="rabbit">Rabbit</option>
+                <option value="hamster">Hamster</option>
+                <option value="fish">Fish</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="petCategory" className="block text-lg font-semibold text-gray-700 mb-3">
+                Pet Category
+              </label>
+              <select
+                id="petCategory"
+                name="petCategory"
+                value={filters.petCategory}
+                onChange={handleFilterChange}
+                className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+              >
+                <option value="">All Categories</option>
+                <option value="puppy">Puppy</option>
+                <option value="adult">Adult</option>
+                <option value="senior">Senior</option>
+                <option value="kitten">Kitten</option>
+                <option value="adult-cat">Adult Cat</option>
+                <option value="senior-cat">Senior Cat</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div>
+              <label htmlFor="city" className="block text-lg font-semibold text-gray-700 mb-3">
+                City
+              </label>
+              <input
+                type="text"
+                id="city"
+                name="city"
+                value={filters.city}
+                onChange={handleFilterChange}
+                placeholder="Enter city..."
+                className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="state" className="block text-lg font-semibold text-gray-700 mb-3">
+                State
+              </label>
+              <input
+                type="text"
+                id="state"
+                name="state"
+                value={filters.state}
+                onChange={handleFilterChange}
+                placeholder="Enter state..."
+                className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="dateRange" className="block text-lg font-semibold text-gray-700 mb-3">
+                Date Range
+              </label>
+              <select
+                id="dateRange"
+                name="dateRange"
+                value={filters.dateRange}
+                onChange={handleFilterChange}
+                className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+              >
+                <option value="">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="3months">Last 3 Months</option>
+                <option value="6months">Last 6 Months</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-center">
+              <div className="flex items-center">
+                <input
+                  id="isEmergency"
+                  name="isEmergency"
+                  type="checkbox"
+                  checked={filters.isEmergency}
+                  onChange={handleFilterChange}
+                  className="h-5 w-5 text-black focus:ring-black border-2 border-gray-300 rounded"
+                />
+                <label htmlFor="isEmergency" className="ml-3 text-lg font-semibold text-gray-700">
+                  Emergency Only
+                </label>
+              </div>
             </div>
           </div>
         </div>

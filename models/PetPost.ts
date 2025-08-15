@@ -46,6 +46,10 @@ const PetPostSchema = new mongoose.Schema(
     petColor: {
       type: String,
     },
+    petCategory: {
+      type: String,
+      enum: ["puppy", "adult", "senior", "kitten", "adult-cat", "senior-cat"],
+    },
     description: {
       type: String,
       required: true,
@@ -59,6 +63,28 @@ const PetPostSchema = new mongoose.Schema(
       type: LocationSchema,
       required: function (this: Record<string, unknown>) {
         // Location is required for missing and wounded pet posts
+        return (
+          this.postType === "missing" ||
+          this.postType === "emergency" ||
+          this.postType === "wounded"
+        );
+      },
+    },
+    city: {
+      type: String,
+      required: function (this: mongoose.Document & { postType?: string }) {
+        // City is required for location-based posts
+        return (
+          this.postType === "missing" ||
+          this.postType === "emergency" ||
+          this.postType === "wounded"
+        );
+      },
+    },
+    state: {
+      type: String,
+      required: function (this: mongoose.Document & { postType?: string }) {
+        // State is required for location-based posts
         return (
           this.postType === "missing" ||
           this.postType === "emergency" ||
@@ -124,6 +150,18 @@ const PetPostSchema = new mongoose.Schema(
 
 // Create a geospatial index on the location field
 PetPostSchema.index({ "location.coordinates": "2dsphere" });
+
+// Create text indexes for search functionality
+PetPostSchema.index({
+  title: "text",
+  description: "text",
+  petName: "text",
+  petBreed: "text",
+  petType: "text",
+  petCategory: "text",
+  city: "text",
+  state: "text",
+});
 
 export default mongoose.models.PetPost ||
   mongoose.model("PetPost", PetPostSchema);

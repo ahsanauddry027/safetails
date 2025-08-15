@@ -37,6 +37,7 @@ interface FormData {
   petAge: string;
   petGender: string;
   petColor: string;
+  petCategory: string;
   description: string;
   contactPhone: string;
   contactEmail: string;
@@ -48,6 +49,8 @@ interface LocationData {
   coordinates: [number, number];
   address: string;
   description: string;
+  city?: string;
+  state?: string;
 }
 
 const CreatePost = () => {
@@ -65,6 +68,7 @@ const CreatePost = () => {
     petAge: "",
     petGender: "unknown",
     petColor: "",
+    petCategory: "",
     description: "",
     contactPhone: "",
     contactEmail: "",
@@ -222,7 +226,13 @@ const CreatePost = () => {
       // Prepare data for submission
       const postData = {
         ...formData,
-        location: location,
+        location: {
+          ...location,
+          city: location.city || "",
+          state: location.state || "",
+        },
+        city: location.city || "",
+        state: location.state || "",
       };
 
       console.log("Submitting post data:", {
@@ -522,6 +532,31 @@ const CreatePost = () => {
               </div>
             </div>
 
+            {/* Pet Category */}
+            <div>
+              <label
+                htmlFor="petCategory"
+                className="block text-lg font-semibold text-gray-700 mb-2"
+              >
+                Pet Category
+              </label>
+              <select
+                id="petCategory"
+                name="petCategory"
+                value={formData.petCategory}
+                onChange={handleChange}
+                className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+              >
+                <option value="">Select Pet Category</option>
+                <option value="puppy">Puppy</option>
+                <option value="adult">Adult</option>
+                <option value="senior">Senior</option>
+                <option value="kitten">Kitten</option>
+                <option value="adult-cat">Adult Cat</option>
+                <option value="senior-cat">Senior Cat</option>
+              </select>
+            </div>
+
             {/* Description */}
             <div>
               <label
@@ -540,6 +575,47 @@ const CreatePost = () => {
                 required
                 placeholder="Provide details about the pet and the situation"
               ></textarea>
+            </div>
+
+            {/* Location Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label
+                  htmlFor="city"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
+                >
+                  City *
+                </label>
+                <input
+                  type="text"
+                  id="city"
+                  name="city"
+                  value={location.city || ""}
+                  onChange={(e) => setLocation({ ...location, city: e.target.value })}
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+                  required
+                  placeholder="Enter city name"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="state"
+                  className="block text-lg font-semibold text-gray-700 mb-2"
+                >
+                  State *
+                </label>
+                <input
+                  type="text"
+                  id="state"
+                  name="state"
+                  value={location.state || ""}
+                  onChange={(e) => setLocation({ ...location, state: e.target.value })}
+                  className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+                  required
+                  placeholder="Enter state name"
+                />
+              </div>
             </div>
 
             {/* Last Seen Date (for missing pets) */}

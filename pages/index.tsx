@@ -154,6 +154,16 @@ export default function Home() {
                     </span>
                     <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </Link>
+
+                  <Link
+                    href="/vet-directory"
+                    className="group relative block w-full text-center px-6 py-3 text-black bg-white border-2 border-black rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-black hover:text-white transform hover:-translate-y-1"
+                  >
+                    <span className="relative z-10 font-semibold group-hover:text-white">
+                      Find Emergency Vets
+                    </span>
+                    <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </Link>
                 </div>
               </div>
             )}
@@ -179,7 +189,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
             <div className="group bg-white border-4 border-gray-200 rounded-3xl p-8 text-center hover-lift animate-fade-in cursor-pointer hover:border-black transition-all duration-300 shadow-lg hover:shadow-2xl">
               <div className="w-24 h-24 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300 group-hover:bg-gray-800 border-4 border-white">
                 <svg
@@ -286,6 +296,34 @@ export default function Home() {
               <p className="text-gray-700 leading-relaxed font-medium group-hover:text-black transition-colors duration-300 text-lg font-body">
                 Create and share posts about pets with location pinning to help
                 find them quickly.
+              </p>
+              <div className="mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="w-12 h-1 bg-black mx-auto rounded-full"></div>
+              </div>
+            </div>
+
+            <div className="group bg-white border-4 border-gray-200 rounded-3xl p-8 text-center hover-lift animate-fade-in cursor-pointer hover:border-black transition-all duration-300 shadow-lg hover:shadow-2xl">
+              <div className="w-24 h-24 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300 group-hover:bg-gray-800 border-4 border-white">
+                <svg
+                  className="w-12 h-12 text-white group-hover:scale-110 transition-transform duration-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold mb-4 text-black group-hover:text-primary transition-colors duration-300 font-heading">
+                Vet Directory
+              </h3>
+              <p className="text-gray-700 leading-relaxed font-medium group-hover:text-black transition-colors duration-300 text-lg font-body">
+                Find emergency veterinarians and pet care services near you with
+                detailed contact information and ratings.
               </p>
               <div className="mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="w-12 h-1 bg-black mx-auto rounded-full"></div>
@@ -571,6 +609,15 @@ export default function Home() {
                   >
                     <span className="w-2 h-2 bg-white rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
                     Vet Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/vet-directory"
+                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group"
+                  >
+                    <span className="w-2 h-2 bg-white rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
+                    Vet Directory
                   </Link>
                 </li>
               </ul>

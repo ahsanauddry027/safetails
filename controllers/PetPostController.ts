@@ -11,6 +11,7 @@ interface PostData {
   petAge?: string;
   petGender?: string;
   petColor?: string;
+  petCategory?: string;
   description: string;
   contactPhone?: string;
   contactEmail?: string;
@@ -20,7 +21,11 @@ interface PostData {
     coordinates: [number, number];
     address?: string;
     description?: string;
+    city?: string;
+    state?: string;
   };
+  city?: string;
+  state?: string;
 }
 
 interface QueryFilter {
