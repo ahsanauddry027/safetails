@@ -74,6 +74,12 @@ export default function Navbar() {
         >
           Vet Directory
         </Link>
+        <Link
+          href="/alerts"
+          className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:text-black transition-all duration-200 font-semibold text-gray-700 hover:shadow-md"
+        >
+          Alerts
+        </Link>
 
         {user ? (
           <>
