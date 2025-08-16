@@ -9,7 +9,7 @@ import CreateAdminModal from "@/components/CreateAdminModal";
 import CommentManagement from "@/components/CommentManagement";
 
 interface User {
-  _id: string;
+  id: string;
   name: string;
   email: string;
   role: string;
@@ -39,6 +39,25 @@ interface PostStats {
   wounded: number;
   active: number;
   resolved: number;
+}
+
+interface Report {
+  _id: string;
+  postId: {
+    _id: string;
+    title: string;
+    images: string[];
+  };
+  reportedBy: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  reason: string;
+  description?: string;
+  status: "pending" | "reviewed" | "resolved";
+  createdAt: string;
+  updatedAt: string;
 }
 
 export default function AdminDashboard() {
@@ -76,6 +95,17 @@ export default function AdminDashboard() {
   const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
   const [showCommentManagement, setShowCommentManagement] = useState(false);
   const [refreshingStats, setRefreshingStats] = useState(false);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsPage, setReportsPage] = useState(1);
+  const [reportsTotalPages, setReportsTotalPages] = useState(1);
+  const [reportsTotal, setReportsTotal] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [userFilters, setUserFilters] = useState({
+    role: "",
+    status: "",
+    dateRange: "",
+  });
   const [notification, setNotification] = useState<{
     message: string;
     type: "success" | "error" | "info";
@@ -99,10 +129,8 @@ export default function AdminDashboard() {
     if (user?.role === "admin") {
       console.log("User is admin, fetching data...");
       fetchUsers();
-      // Temporarily disable post stats to avoid 401 error
-      // setTimeout(() => {
-      //   fetchPostStats();
-      // }, 100);
+      fetchPostStats();
+      fetchReports();
     }
   }, [user]);
 
@@ -115,6 +143,46 @@ export default function AdminDashboard() {
       type,
       isVisible: true,
     });
+  };
+
+  // Enhanced error handling function
+  const getErrorMessage = (error: unknown) => {
+    if (error && typeof error === "object" && "response" in error) {
+      const axiosError = error as {
+        response?: {
+          status?: number;
+          data?: { message?: string };
+        };
+      };
+
+      if (axiosError.response?.status === 401) {
+        return "Session expired. Please login again.";
+      }
+      if (axiosError.response?.status === 403) {
+        return "Insufficient permissions.";
+      }
+      if (axiosError.response?.status === 404) {
+        return "Resource not found.";
+      }
+      if (axiosError.response?.status === 409) {
+        return "Conflict: Resource already exists.";
+      }
+      if (axiosError.response?.status === 422) {
+        return "Invalid data provided.";
+      }
+      if (axiosError.response?.status && axiosError.response.status >= 500) {
+        return "Server error. Please try again later.";
+      }
+      return (
+        axiosError.response?.data?.message || "An unexpected error occurred."
+      );
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "An unexpected error occurred.";
   };
 
   const hideNotification = () => {
@@ -146,7 +214,6 @@ export default function AdminDashboard() {
     try {
       setRefreshingStats(true);
       console.log("Fetching post stats...");
-      console.log("Current user:", user);
 
       // Check if user is authenticated and is admin
       if (!user || user.role !== "admin") {
@@ -154,27 +221,8 @@ export default function AdminDashboard() {
         return;
       }
 
-      // Test with a simple request first to verify authentication
-      try {
-        const testResponse = await axios.get("/api/auth/me", {
-          withCredentials: true,
-        });
-        console.log("Auth test response:", testResponse.data);
-      } catch (testError) {
-        console.error("Auth test failed:", testError);
-        showNotification(
-          "Authentication failed. Please log in again.",
-          "error"
-        );
-        return;
-      }
-
-      // Now try to fetch post stats
       const response = await axios.get("/api/admin/posts/stats", {
         withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
       });
       console.log("Post stats response:", response.data);
       setPostStats(response.data);
@@ -192,7 +240,6 @@ export default function AdminDashboard() {
             "Authentication expired. Please log in again.",
             "error"
           );
-          // Optionally redirect to login
           router.push("/login");
         } else if (axiosError.response?.status === 403) {
           showNotification(
@@ -210,6 +257,57 @@ export default function AdminDashboard() {
       }
     } finally {
       setRefreshingStats(false);
+    }
+  };
+
+  // Fetch reports for content review
+  const fetchReports = async (page = 1) => {
+    try {
+      setReportsLoading(true);
+      const response = await axios.get(`/api/reports?page=${page}&limit=10`, {
+        withCredentials: true,
+      });
+
+      if (response.data.success) {
+        setReports(response.data.data);
+        setReportsTotalPages(response.data.pagination.totalPages);
+        setReportsTotal(response.data.pagination.total);
+        setReportsPage(page);
+      }
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      showNotification("Failed to fetch reports", "error");
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const handleReportStatusUpdate = async (reportId: string, status: string) => {
+    try {
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+
+      const response = await axios.put(
+        `/api/reports/${reportId}`,
+        {
+          status,
+          reviewedBy: user.id,
+        },
+        {
+          withCredentials: true,
+        }
+      );
+
+      // Refresh the reports list to show updated status
+      await fetchReports(reportsPage);
+      showNotification(`Report marked as ${status} successfully`, "success");
+
+      return response.data;
+    } catch (error) {
+      console.error("Failed to update report:", error);
+      showNotification(getErrorMessage(error), "error");
+      throw error;
     }
   };
 
@@ -279,13 +377,7 @@ export default function AdminDashboard() {
         "success"
       );
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to update user status";
-      const axiosError = error as { response?: { data?: { error?: string } } };
-      showNotification(
-        axiosError.response?.data?.error || errorMessage,
-        "error"
-      );
+      showNotification(getErrorMessage(error), "error");
     }
   };
 
@@ -303,13 +395,7 @@ export default function AdminDashboard() {
       fetchUsers();
       showNotification("User deleted successfully", "success");
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to delete user";
-      const axiosError = error as { response?: { data?: { error?: string } } };
-      showNotification(
-        axiosError.response?.data?.error || errorMessage,
-        "error"
-      );
+      showNotification(getErrorMessage(error), "error");
     }
   };
 
@@ -321,13 +407,7 @@ export default function AdminDashboard() {
       fetchUsers();
       showNotification("User updated successfully", "success");
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to update user";
-      const axiosError = error as { response?: { data?: { error?: string } } };
-      showNotification(
-        axiosError.response?.data?.error || errorMessage,
-        "error"
-      );
+      showNotification(getErrorMessage(error), "error");
     }
   };
 
@@ -349,18 +429,89 @@ export default function AdminDashboard() {
   };
 
   const getFilteredUsers = () => {
+    let filteredUsers = [];
+
+    // First filter by tab
     switch (activeTab) {
       case "users":
-        return users.users;
+        filteredUsers = users.users;
+        break;
       case "vets":
-        return users.vets;
+        filteredUsers = users.vets;
+        break;
       case "admins":
-        return users.admins;
+        filteredUsers = users.admins;
+        break;
       case "blocked":
-        return users.blocked;
+        filteredUsers = users.blocked;
+        break;
       default:
-        return getAllUsers();
+        filteredUsers = getAllUsers();
     }
+
+    // Then apply search filter
+    if (searchTerm) {
+      filteredUsers = filteredUsers.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply role filter
+    if (userFilters.role) {
+      filteredUsers = filteredUsers.filter(
+        (user) => user.role === userFilters.role
+      );
+    }
+
+    // Apply status filter
+    if (userFilters.status) {
+      if (userFilters.status === "active") {
+        filteredUsers = filteredUsers.filter((user) => !user.isBlocked);
+      } else if (userFilters.status === "blocked") {
+        filteredUsers = filteredUsers.filter((user) => user.isBlocked);
+      }
+    }
+
+    // Apply date range filter
+    if (userFilters.dateRange) {
+      const now = new Date();
+
+      switch (userFilters.dateRange) {
+        case "today":
+          filteredUsers = filteredUsers.filter((user: User) => {
+            const userDate = new Date(user.createdAt);
+            return userDate.toDateString() === now.toDateString();
+          });
+          break;
+        case "week":
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          filteredUsers = filteredUsers.filter((user: User) => {
+            const userDate = new Date(user.createdAt);
+            return userDate >= weekAgo;
+          });
+          break;
+        case "month":
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          filteredUsers = filteredUsers.filter((user: User) => {
+            const userDate = new Date(user.createdAt);
+            return userDate >= monthAgo;
+          });
+          break;
+      }
+    }
+
+    return filteredUsers;
+  };
+
+  const clearUserFilters = () => {
+    setSearchTerm("");
+    setUserFilters({
+      role: "",
+      status: "",
+      dateRange: "",
+    });
   };
 
   return (
@@ -757,9 +908,29 @@ export default function AdminDashboard() {
         {/* User Management Section */}
         <div className="bg-white rounded-lg shadow-md">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-800">
-              User Management
-            </h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-800">
+                User Management
+              </h2>
+              <button
+                onClick={fetchUsers}
+                disabled={loadingUsers}
+                className={`px-4 py-2 text-white rounded-md cursor-pointer ${
+                  loadingUsers
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
+              >
+                {loadingUsers ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Refreshing...
+                  </div>
+                ) : (
+                  "Refresh Users"
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -786,7 +957,7 @@ export default function AdminDashboard() {
                 {
                   id: "reports",
                   label: "Content Review",
-                  count: 0, // We'll add this later
+                  count: reportsTotal,
                 },
               ].map((tab) => (
                 <button
@@ -802,6 +973,118 @@ export default function AdminDashboard() {
                 </button>
               ))}
             </nav>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              {/* Search */}
+              <div className="lg:col-span-2">
+                <label
+                  htmlFor="search"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Search Users
+                </label>
+                <input
+                  type="text"
+                  id="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by name or email..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Role Filter */}
+              <div>
+                <label
+                  htmlFor="role"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Role
+                </label>
+                <select
+                  id="role"
+                  value={userFilters.role}
+                  onChange={(e) =>
+                    setUserFilters({ ...userFilters, role: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">All Roles</option>
+                  <option value="user">User</option>
+                  <option value="vet">Veterinarian</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <label
+                  htmlFor="status"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Status
+                </label>
+                <select
+                  id="status"
+                  value={userFilters.status}
+                  onChange={(e) =>
+                    setUserFilters({ ...userFilters, status: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="blocked">Blocked</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Date Range Filter */}
+              <div>
+                <label
+                  htmlFor="dateRange"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Date Range
+                </label>
+                <select
+                  id="dateRange"
+                  value={userFilters.dateRange}
+                  onChange={(e) =>
+                    setUserFilters({
+                      ...userFilters,
+                      dateRange: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                </select>
+              </div>
+
+              {/* Clear Filters */}
+              <div className="flex items-end">
+                <button
+                  onClick={clearUserFilters}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+
+            {/* Results Count */}
+            <div className="text-sm text-gray-600">
+              Showing {getFilteredUsers().length} of {getAllUsers().length}{" "}
+              users
+            </div>
           </div>
 
           {/* Users Table */}
@@ -834,7 +1117,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {getFilteredUsers().map((user) => (
-                    <tr key={user._id}>
+                                         <tr key={user.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
@@ -938,25 +1221,27 @@ export default function AdminDashboard() {
                             </svg>
                             {user.isBlocked ? "Unblock" : "Block"}
                           </button>
-                          <button
-                            onClick={() => handleDeleteUser(user._id)}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 cursor-pointer"
-                          >
-                            <svg
-                              className="w-3 h-3 mr-1"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                                                     {user.id && (
+                             <button
+                               onClick={() => handleDeleteUser(user.id!)}
+                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 cursor-pointer"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                            Delete
-                          </button>
+                              <svg
+                                className="w-3 h-3 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -966,6 +1251,175 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+
+        {/* Reports Content Review Section */}
+        {activeTab === "reports" && (
+          <div className="bg-white rounded-lg shadow-md mt-8">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Content Review - Reports
+                  </h2>
+                  <p className="text-gray-600 mt-2">
+                    Review and manage reported content from users
+                  </p>
+                </div>
+                <button
+                  onClick={() => fetchReports(reportsPage)}
+                  disabled={reportsLoading}
+                  className={`px-4 py-2 text-white rounded-md cursor-pointer ${
+                    reportsLoading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {reportsLoading ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Refreshing...
+                    </div>
+                  ) : (
+                    "Refresh Reports"
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              {reportsLoading ? (
+                <div className="p-8 text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto"></div>
+                  <p className="mt-2 text-gray-600">Loading reports...</p>
+                </div>
+              ) : reports.length === 0 ? (
+                <div className="p-8 text-center">
+                  <p className="text-gray-500">No reports found.</p>
+                </div>
+              ) : (
+                <div className="space-y-4 p-6">
+                  {reports.map((report) => (
+                    <div
+                      key={report._id}
+                      className="border border-gray-200 rounded-lg p-4"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            Reported Post:{" "}
+                            {report.postId?.title || "Unknown Post"}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Reported by: {report.reportedBy?.name} (
+                            {report.reportedBy?.email})
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(report.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            report.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : report.status === "reviewed"
+                                ? "bg-blue-100 text-blue-800"
+                                : report.status === "resolved"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {report.status.charAt(0).toUpperCase() +
+                            report.status.slice(1)}
+                        </span>
+                      </div>
+
+                      <div className="mb-3">
+                        <p className="text-sm font-medium text-gray-700 mb-1">
+                          Reason:
+                        </p>
+                        <p className="text-gray-600">{report.reason}</p>
+                      </div>
+
+                      {report.description && (
+                        <div className="mb-3">
+                          <p className="text-sm font-medium text-gray-700 mb-1">
+                            Description:
+                          </p>
+                          <p className="text-gray-600">{report.description}</p>
+                        </div>
+                      )}
+
+                      <div className="flex space-x-2">
+                        {report.status === "pending" && (
+                          <>
+                            <button
+                              onClick={() =>
+                                handleReportStatusUpdate(report._id, "reviewed")
+                              }
+                              className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                            >
+                              Mark Reviewed
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleReportStatusUpdate(report._id, "resolved")
+                              }
+                              className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                            >
+                              Mark Resolved
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() =>
+                            window.open(
+                              `/posts/${report.postId?._id}`,
+                              "_blank"
+                            )
+                          }
+                          className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                        >
+                          View Post
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Pagination */}
+                  {reportsTotalPages > 1 && (
+                    <div className="flex justify-center items-center space-x-2 mt-6">
+                      <button
+                        onClick={() => fetchReports(reportsPage - 1)}
+                        disabled={reportsPage === 1}
+                        className={`px-3 py-1 text-sm rounded-md ${
+                          reportsPage === 1
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-600 text-white hover:bg-gray-700"
+                        }`}
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm text-gray-600">
+                        Page {reportsPage} of {reportsTotalPages}
+                      </span>
+                      <button
+                        onClick={() => fetchReports(reportsPage + 1)}
+                        disabled={reportsPage === reportsTotalPages}
+                        className={`px-3 py-1 text-sm rounded-md ${
+                          reportsPage === reportsTotalPages
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-600 text-white hover:bg-gray-700"
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User Details Modal */}
@@ -1079,9 +1533,13 @@ export default function AdminDashboard() {
                   Cancel
                 </button>
                 <button
-                  onClick={() =>
-                    handleUpdateUser(selectedUser._id, selectedUser)
-                  }
+                  onClick={() => {
+                                         if (selectedUser.id) {
+                       handleUpdateUser(selectedUser.id, selectedUser);
+                    } else {
+                      showNotification("User ID is missing.", "error");
+                    }
+                  }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
                 >
                   Update
@@ -1131,9 +1589,9 @@ export default function AdminDashboard() {
                   Cancel
                 </button>
                 <button
-                  onClick={() =>
-                    handleBlockUser(selectedUser._id, !selectedUser.isBlocked)
-                  }
+                                     onClick={() =>
+                     handleBlockUser(selectedUser.id!, !selectedUser.isBlocked)
+                   }
                   className={`px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer ${
                     selectedUser.isBlocked
                       ? "bg-green-600 text-white focus:ring-green-500"
