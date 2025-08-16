@@ -783,6 +783,11 @@ export default function AdminDashboard() {
                   label: "Blocked Users",
                   count: users.blocked.length,
                 },
+                {
+                  id: "reports",
+                  label: "Content Review",
+                  count: 0, // We'll add this later
+                },
               ].map((tab) => (
                 <button
                   key={tab.id}

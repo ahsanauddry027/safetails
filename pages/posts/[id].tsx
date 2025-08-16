@@ -6,6 +6,7 @@ import axios from "axios";
 import Link from "next/link";
 import Head from "next/head";
 import dynamic from "next/dynamic";
+import ReportPostModal from "@/components/ReportPostModal";
 
 // Dynamically import LeafletMap to avoid SSR issues
 const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
@@ -90,6 +91,7 @@ const PostDetail = () => {
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [resolvingPost, setResolvingPost] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Map container style
   const mapContainerStyle = {
@@ -576,6 +578,29 @@ const PostDetail = () => {
                 </div>
               </div>
 
+              {/* Action Buttons */}
+              <div className="p-8 border-b-2 border-gray-200">
+                <div className="flex flex-wrap gap-4 justify-center">
+                  {user && (
+                    <button
+                      onClick={() => setShowReportModal(true)}
+                      className="px-6 py-3 bg-black text-white rounded-md font-medium"
+                    >
+                      Report Post
+                    </button>
+                  )}
+                  {user && (user._id === post.userId._id || user.role === 'admin') && post.status === 'active' && (
+                    <button
+                      onClick={handleResolvePost}
+                      disabled={resolvingPost}
+                      className="px-6 py-3 bg-gray-800 text-white rounded-md font-medium disabled:bg-gray-400"
+                    >
+                      {resolvingPost ? 'Resolving...' : 'Mark as Resolved'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Comments */}
               <div className="p-8">
                 <h2 className="text-2xl font-bold text-black mb-6 flex items-center">
@@ -695,6 +720,16 @@ const PostDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Report Post Modal */}
+      {showReportModal && (
+        <ReportPostModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          postId={post?._id || ''}
+          postTitle={post?.title || ''}
+        />
+      )}
 
       {/* Image Modal */}
       {selectedImage && (

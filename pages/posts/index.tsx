@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import Link from "next/link";
+import ReportPostModal from "@/components/ReportPostModal";
 
 interface Post {
   _id: string;
@@ -70,6 +71,8 @@ const Posts = () => {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedPostForReport, setSelectedPostForReport] = useState<{ id: string; title: string } | null>(null);
   
   // Fetch posts when component mounts or filters change
   useEffect(() => {
@@ -231,6 +234,11 @@ const Posts = () => {
     }
   };
 
+  const handleReportPost = (postId: string, postTitle: string) => {
+    setSelectedPostForReport({ id: postId, title: postTitle });
+    setShowReportModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -243,17 +251,15 @@ const Posts = () => {
           {user && (
             <Link
               href="/create-post"
-              className="group relative inline-flex items-center justify-center px-8 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
+              className="inline-flex items-center justify-center px-8 py-4 text-white bg-black border-2 border-black rounded-2xl"
             >
-              <span className="relative z-10 font-bold text-lg">Create Post</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                              <span className="font-bold text-lg">Create Post</span>
             </Link>
           )}
         </div>
         
         {/* Enhanced Filters */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8 border-4 border-gray-200 hover:border-black transition-all duration-300">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8 border-4 border-gray-200">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-black flex items-center">
               <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -263,7 +269,7 @@ const Posts = () => {
             </h2>
             <button
               onClick={clearFilters}
-              className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border-2 border-gray-300 rounded-xl hover:bg-gray-200 hover:border-gray-400 transition-all duration-300"
+              className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border-2 border-gray-300 rounded-xl"
             >
               Clear All Filters
             </button>
@@ -290,7 +296,7 @@ const Posts = () => {
                   setCurrentPage(1);
                   fetchPosts();
                 }}
-                className="px-8 py-4 bg-black text-white rounded-2xl hover:bg-gray-800 transition-all duration-300 font-semibold"
+                className="px-8 py-4 bg-black text-white rounded-2xl font-semibold"
               >
                 Search
               </button>
@@ -483,9 +489,9 @@ const Posts = () => {
             {posts.length > 0 ? (
               <div className="space-y-6">
                 {posts.map((post) => (
-                  <div key={post._id} className="group bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-gray-200 hover:border-black transition-all duration-300 hover:shadow-3xl hover:-translate-y-1">
+                  <div key={post._id} className="group bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-gray-200">
                     <Link href={`/posts/${post._id}`}>
-                      <div className="p-8 cursor-pointer hover:bg-gray-50 transition-all duration-300">
+                                              <div className="p-8 cursor-pointer">
                         <div className="flex flex-col lg:flex-row gap-6">
                           {/* Images Section */}
                           {post.images && post.images.length > 0 && (
@@ -509,7 +515,7 @@ const Posts = () => {
                           <div className="lg:w-2/3 flex-1">
                             <div className="flex justify-between items-start mb-4">
                               <div className="flex-1">
-                                <h2 className="text-2xl font-bold text-black mb-3 group-hover:text-gray-700 transition-colors duration-300">
+                                <h2 className="text-2xl font-bold text-black mb-3">
                                   {post.title}
                                 </h2>
                                 <div className="flex items-center space-x-3 mb-4">
@@ -588,6 +594,18 @@ const Posts = () => {
                         </div>
                       </div>
                     </Link>
+                    
+                    {/* Action Buttons */}
+                    <div className="px-8 pb-6 flex justify-end">
+                      {user && (
+                        <button
+                          onClick={() => handleReportPost(post._id, post.title)}
+                          className="px-4 py-2 bg-black text-white rounded-md text-sm font-medium"
+                        >
+                          Report
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -613,7 +631,7 @@ const Posts = () => {
                     className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
                       currentPage === 1 
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-black border-2 border-gray-200'
+                        : 'bg-white text-gray-700 border-2 border-gray-200'
                     }`}
                   >
                     Previous
@@ -626,7 +644,7 @@ const Posts = () => {
                       className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
                         currentPage === page 
                           ? 'bg-black text-white border-2 border-black' 
-                          : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-black border-2 border-gray-200'
+                          : 'bg-white text-gray-700 border-2 border-gray-200'
                       }`}
                     >
                       {page}
@@ -639,7 +657,7 @@ const Posts = () => {
                     className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 ${
                       currentPage === totalPages 
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                        : 'bg-white text-gray-700 hover:bg-gray-50 hover:border-black border-2 border-gray-200'
+                        : 'bg-white text-gray-700 border-2 border-gray-200'
                     }`}
                   >
                     Next
@@ -650,6 +668,19 @@ const Posts = () => {
           </>
         )}
       </div>
+
+      {/* Report Post Modal */}
+      {showReportModal && selectedPostForReport && (
+        <ReportPostModal
+          isOpen={showReportModal}
+          onClose={() => {
+            setShowReportModal(false);
+            setSelectedPostForReport(null);
+          }}
+          postId={selectedPostForReport.id}
+          postTitle={selectedPostForReport.title}
+        />
+      )}
     </div>
   );
 };
