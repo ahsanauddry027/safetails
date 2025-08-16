@@ -120,17 +120,39 @@ export default function AdminDashboard() {
     if (!loading && !user) {
       router.push("/login");
     } else if (user && user.role !== "admin") {
+      console.error("❌ User is not admin:", { userId: user?.id, userRole: user?.role, userEmail: user?.email });
+      showNotification(`Access denied. Your role is: ${user?.role}. Admin role required.`, "error");
       router.push("/");
     }
   }, [user, loading, router]);
 
   useEffect(() => {
-    console.log("User state changed:", { user: user?.role, loading });
+    console.log("🔍 User state changed:", { 
+      userId: user?.id, 
+      userRole: user?.role, 
+      userEmail: user?.email, 
+      loading,
+      isAdmin: user?.role === "admin"
+    });
+    
     if (user?.role === "admin") {
-      console.log("User is admin, fetching data...");
-      fetchUsers();
-      fetchPostStats();
-      fetchReports();
+      console.log("✅ User is admin, fetching data...");
+      console.log("🔍 Starting data fetch operations...");
+      
+      // Fetch data with error handling
+      Promise.allSettled([
+        fetchUsers().catch(err => console.error("❌ Failed to fetch users:", err)),
+        fetchPostStats().catch(err => console.error("❌ Failed to fetch post stats:", err)),
+        fetchReports().catch(err => console.error("❌ Failed to fetch reports:", err))
+      ]).then(results => {
+        console.log("📊 Data fetch results:", results.map((result, index) => ({
+          operation: ["users", "postStats", "reports"][index],
+          status: result.status,
+          error: result.status === "rejected" ? result.reason : null
+        })));
+      });
+    } else {
+      console.log("❌ User is not admin, cannot fetch data");
     }
   }, [user]);
 
@@ -264,7 +286,10 @@ export default function AdminDashboard() {
   const fetchReports = async (page = 1) => {
     try {
       setReportsLoading(true);
-      const response = await axios.get(`/api/reports?page=${page}&limit=10`, {
+      console.log("🔍 Fetching reports for page:", page);
+      
+      // Use admin reports endpoint instead of public reports endpoint
+      const response = await axios.get(`/api/admin/reports?page=${page}&limit=10`, {
         withCredentials: true,
       });
 
@@ -273,10 +298,38 @@ export default function AdminDashboard() {
         setReportsTotalPages(response.data.pagination.totalPages);
         setReportsTotal(response.data.pagination.total);
         setReportsPage(page);
+        console.log("✅ Reports fetched successfully:", response.data.data.length);
       }
-    } catch (error) {
-      console.error("Error fetching reports:", error);
-      showNotification("Failed to fetch reports", "error");
+    } catch (error: unknown) {
+      console.error("❌ Error fetching reports:", error);
+      
+      // Type-safe error handling
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as {
+          response?: {
+            status?: number;
+            statusText?: string;
+            data?: { message?: string };
+          };
+          message?: string;
+        };
+        
+        console.error("❌ Error details:", {
+          status: axiosError.response?.status,
+          statusText: axiosError.response?.statusText,
+          data: axiosError.response?.data,
+          message: axiosError.message
+        });
+        
+        if (axiosError.response?.status === 403) {
+          showNotification("Access denied. You don't have permission to view reports. Please check your admin role.", "error");
+        } else {
+          showNotification(`Failed to fetch reports: ${getErrorMessage(error)}`, "error");
+        }
+      } else {
+        console.error("❌ Unknown error type:", error);
+        showNotification(`Failed to fetch reports: ${getErrorMessage(error)}`, "error");
+      }
     } finally {
       setReportsLoading(false);
     }
@@ -288,8 +341,9 @@ export default function AdminDashboard() {
         throw new Error("User not authenticated");
       }
 
+      // Use admin reports update endpoint instead of public reports endpoint
       const response = await axios.put(
-        `/api/reports/${reportId}`,
+        `/api/admin/reports/${reportId}`,
         {
           status,
           reviewedBy: user.id,
@@ -519,38 +573,35 @@ export default function AdminDashboard() {
       {/* Enhanced Header */}
       <div className="bg-gradient-to-r from-black via-gray-800 to-black text-white shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-white/5"></div>
-        <div className="max-w-7xl mx-auto px-4 py-12 relative">
+        <div className="max-w-7xl mx-auto px-6 py-16 relative">
           <div className="flex items-center justify-between">
             <div className="group">
-              <h1 className="text-5xl font-bold tracking-wide mb-3 group-hover:scale-105 transition-transform duration-300 font-display">
+              <h1 className="text-6xl font-bold tracking-tight group-hover:scale-105 transition-all duration-500 font-display bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                 Admin Dashboard
               </h1>
-              <p className="text-white text-opacity-90 text-xl font-body">
-                Welcome back, <span className="text-primary">{user.name}</span>
-              </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <button
                 onClick={() => setShowCommentManagement(true)}
-                className="px-6 py-3 text-white bg-black border-2 border-white rounded-2xl font-bold cursor-pointer"
+                className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
               >
                 Manage Comments
               </button>
               <button
                 onClick={() => setShowCreateAdminModal(true)}
-                className="px-6 py-3 text-white bg-black border-2 border-white rounded-2xl font-bold cursor-pointer"
+                className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
               >
                 Create Admin
               </button>
               <Link
                 href="/profile"
-                className="px-6 py-3 text-white bg-black border-2 border-white rounded-2xl font-bold cursor-pointer"
+                className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
               >
                 My Profile
               </Link>
               <Link
                 href="/"
-                className="px-6 py-3 text-white bg-black border-2 border-white rounded-2xl font-bold cursor-pointer"
+                className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
               >
                 Home
               </Link>

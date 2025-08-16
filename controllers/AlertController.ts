@@ -56,31 +56,55 @@ async function getAlerts(req: NextApiRequest, res: NextApiResponse) {
     if (type) filter.type = type;
     if (urgency) filter.urgency = urgency;
 
+    let alerts;
+    let total;
+
     // Add geolocation filter if coordinates provided
     if (latitude && longitude) {
       const lat = parseFloat(latitude as string);
       const lng = parseFloat(longitude as string);
       
-      filter.location = {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [lng, lat]
-          },
-          $maxDistance: radiusNum * 1000 // Convert km to meters
-        }
-      };
-    }
+      try {
+        // Use $geoWithin with $centerSphere for better compatibility
+        filter['location.coordinates'] = {
+          $geoWithin: {
+            $centerSphere: [
+              [lng, lat],
+              radiusNum / 6371 // Convert km to radians (Earth radius = 6371 km)
+            ]
+          }
+        };
 
-    // Get total count
-    const total = await Alert.countDocuments(filter);
-    
-    // Get alerts with pagination
-    const alerts = await Alert.find(filter)
-      .populate('createdBy', 'name email')
-      .sort({ urgency: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limitNum);
+        // Get total count and alerts with geospatial filter
+        total = await Alert.countDocuments(filter);
+        
+        alerts = await Alert.find(filter)
+          .populate('createdBy', 'name email')
+          .sort({ urgency: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(limitNum);
+          
+      } catch (geoError: any) {
+        console.error('Geospatial query error:', geoError);
+        // Fallback to regular query without geospatial filtering
+        total = await Alert.countDocuments(filter);
+        
+        alerts = await Alert.find(filter)
+          .populate('createdBy', 'name email')
+          .sort({ urgency: -1, createdAt: -1 })
+          .skip(skip)
+          .limit(limitNum);
+      }
+    } else {
+      // No geolocation filter, use regular find
+      total = await Alert.countDocuments(filter);
+      
+      alerts = await Alert.find(filter)
+        .populate('createdBy', 'name email')
+        .sort({ urgency: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum);
+    }
 
     const totalPages = Math.ceil(total / limitNum);
 
@@ -95,8 +119,17 @@ async function getAlerts(req: NextApiRequest, res: NextApiResponse) {
         hasPrev: pageNum > 1
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting alerts:', error);
+    
+    // Check if it's a geospatial index error
+    if (error.code === 5626500 || error.codeName === 'Location5626500') {
+      return res.status(500).json({ 
+        message: 'Geospatial query error. Please ensure the database has proper geospatial indexes.',
+        error: 'Geospatial index not available'
+      });
+    }
+    
     return res.status(500).json({ message: 'Failed to fetch alerts' });
   }
 }

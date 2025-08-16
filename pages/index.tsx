@@ -105,64 +105,49 @@ export default function Home() {
                 </Link>
               </div>
             ) : (
-              <div className="card p-8 max-w-md mx-auto hover-lift">
+              <div className="card p-8 max-w-4xl mx-auto">
                 <h2 className="text-2xl font-bold mb-6 text-black">
                   Welcome back,{" "}
                   <span className="text-primary">{user.name}</span>! 👋
                 </h2>
-                <div className="space-y-4">
+                <div className="flex flex-wrap gap-4 justify-center">
                   <Link
                     href="/profile"
-                    className="group relative block w-full text-center px-6 py-3 text-white bg-black border-2 border-black rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
+                    className="px-6 py-3 text-white bg-black border-2 border-black rounded-xl font-semibold"
                   >
-                    <span className="relative z-10 font-semibold">
-                      View Profile
-                    </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    View Profile
                   </Link>
 
                   {user.role === "vet" && (
                     <Link
                       href="/vet-dashboard"
-                      className="group relative block w-full text-center px-6 py-3 text-black bg-white border-2 border-black rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-black hover:text-white transform hover:-translate-y-1"
+                      className="px-6 py-3 text-white bg-black border-2 border-black rounded-xl font-semibold"
                     >
-                      <span className="relative z-10 font-semibold group-hover:text-white">
-                        Vet Dashboard
-                      </span>
-                      <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      Vet Dashboard
                     </Link>
                   )}
 
                   {user.role === "admin" && (
                     <Link
                       href="/admin-dashboard"
-                      className="group relative block w-full text-center px-6 py-3 text-black bg-white border-2 border-black rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-black hover:text-white transform hover:-translate-y-1"
+                      className="px-6 py-3 text-white bg-black border-2 border-black rounded-xl font-semibold"
                     >
-                      <span className="relative z-10 font-semibold group-hover:text-white">
-                        Admin Panel
-                      </span>
-                      <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      Admin Panel
                     </Link>
                   )}
 
                   <Link
                     href="/create-post"
-                    className="group relative block w-full text-center px-6 py-3 text-white bg-green-600 border-2 border-green-600 rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-green-700 hover:bg-green-700 transform hover:-translate-y-1"
+                    className="px-6 py-3 text-white bg-black border-2 border-black rounded-xl font-semibold"
                   >
-                    <span className="relative z-10 font-semibold">
-                      Create Pet Post
-                    </span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    Create Pet Post
                   </Link>
 
                   <Link
                     href="/vet-directory"
-                    className="group relative block w-full text-center px-6 py-3 text-black bg-white border-2 border-black rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-black hover:text-white transform hover:-translate-y-1"
+                    className="px-6 py-3 text-white bg-black border-2 border-black rounded-xl font-semibold"
                   >
-                    <span className="relative z-10 font-semibold group-hover:text-white">
-                      Find Emergency Vets
-                    </span>
-                    <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    Find Emergency Vets
                   </Link>
                 </div>
               </div>

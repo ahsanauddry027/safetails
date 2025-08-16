@@ -198,8 +198,57 @@ a:focus {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 48px;
-  text-decoration: none;
+}
+
+/* Universal button cursor pointer */
+button {
+  cursor: pointer;
+}
+
+/* Ensure all clickable elements have pointer cursor */
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+.btn {
+  cursor: pointer;
+}
+
+/* Additional button hover effects for better UX */
+button:hover,
+[role="button"]:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+input[type="reset"]:hover {
+  cursor: pointer;
+}
+
+/* Ensure buttons with Tailwind classes also get cursor pointer */
+button[class*="px-"],
+button[class*="py-"],
+button[class*="bg-"],
+button[class*="text-"],
+button[class*="border-"],
+button[class*="rounded-"],
+button[class*="shadow-"],
+button[class*="hover:"] {
+  cursor: pointer;
+}
+
+/* Comprehensive button cursor pointer - catch all remaining cases */
+button,
+button *,
+button[class*=""] {
+  cursor: pointer !important;
+}
+
+/* Final fallback for any button elements */
+*[role="button"],
+*[type="button"],
+*[type="submit"],
+*[type="reset"] {
+  cursor: pointer !important;
 }
 
 .btn::before {

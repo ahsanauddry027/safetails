@@ -34,7 +34,11 @@ export default async function handler(
     // Use controller to authenticate user
     const user = await UserController.authenticateUser(email, password);
 
-    const token = signToken({ id: user.id });
+    const token = signToken({ 
+      id: user.id, 
+      role: user.role,
+      email: user.email 
+    });
     setTokenCookie(res, token);
 
     return res.status(200).json({ user });

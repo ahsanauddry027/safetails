@@ -268,30 +268,25 @@ export default function VetDashboard() {
       {/* Enhanced Header */}
       <div className="bg-gradient-to-r from-black via-gray-800 to-black text-white shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-white/5"></div>
-        <div className="max-w-7xl mx-auto px-4 py-12 relative">
+        <div className="max-w-7xl mx-auto px-6 py-16 relative">
           <div className="flex items-center justify-between">
             <div className="group">
-              <h1 className="text-5xl font-bold tracking-wide mb-3 group-hover:scale-105 transition-transform duration-300 font-display">
+              <h1 className="text-6xl font-bold tracking-tight font-display bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                 Vet Dashboard
               </h1>
-              <p className="text-white text-opacity-90 text-xl font-body">
-                Welcome back, Dr. <span className="text-primary">{user.name}</span>
-              </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <Link
                 href="/profile"
-                className="group relative inline-flex items-center justify-center px-6 py-3 text-white bg-black border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
+                className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
               >
-                <span className="relative z-10 font-bold">My Profile</span>
-                <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                My Profile
               </Link>
               <Link
                 href="/"
-                className="group relative inline-flex items-center justify-center px-6 py-3 text-black bg-white border-2 border-white rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl transform hover:-translate-y-1"
+                className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
               >
-                <span className="relative z-10 font-bold group-hover:text-white">Home</span>
-                <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                Home
               </Link>
             </div>
           </div>

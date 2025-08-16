@@ -49,8 +49,7 @@ const AlertSchema = new Schema<IAlert>({
   location: {
     coordinates: {
       type: [Number],
-      required: true,
-      index: '2dsphere'
+      required: true
     },
     address: {
       type: String,
@@ -129,7 +128,7 @@ AlertSchema.pre('save', function(next) {
 });
 
 // Create indexes for efficient queries
-AlertSchema.index({ location: '2dsphere' });
+AlertSchema.index({ 'location.coordinates': '2dsphere' });
 AlertSchema.index({ type: 1, status: 1, isActive: 1 });
 AlertSchema.index({ urgency: 1, createdAt: -1 });
 AlertSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
