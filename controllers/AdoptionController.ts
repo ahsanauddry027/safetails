@@ -35,8 +35,6 @@ async function getAdoptions(req: NextApiRequest, res: NextApiResponse) {
       status,
       adoptionType,
       petType,
-      city,
-      state,
       search,
       minAge,
       maxAge
@@ -52,12 +50,9 @@ async function getAdoptions(req: NextApiRequest, res: NextApiResponse) {
     if (status) filter.status = status;
     if (adoptionType) filter.adoptionType = adoptionType;
     if (petType) filter.petType = petType;
-    if (city) filter['location.city'] = { $regex: city, $options: 'i' };
-    if (state) filter['location.state'] = { $regex: state, $options: 'i' };
     
     if (search) {
       filter.$or = [
-        { petName: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
         { petBreed: { $regex: search, $options: 'i' } }
       ];
@@ -108,16 +103,14 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const {
-      petName,
       petType,
-      breed,
-      age,
-      gender,
-      size,
-      color,
+      petBreed,
+      petAge,
+      petGender,
+      petCategory,
+      petColor,
       description,
       images,
-      location,
       adoptionType,
       adoptionFee,
       isSpayedNeutered,
@@ -131,34 +124,20 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
     } = req.body;
 
     // Validate required fields
-    if (!petName || !petType || !description || !location || !adoptionType) {
+    if (!petType || !description || !adoptionType) {
       return res.status(400).json({ message: 'Missing required fields' });
-    }
-    
-    // Validate location coordinates
-    if (!location.coordinates || location.coordinates.length !== 2 || 
-        (location.coordinates[0] === 0 && location.coordinates[1] === 0)) {
-      return res.status(400).json({ message: 'Valid location coordinates are required' });
-    }
-    
-    // Validate coordinate ranges (longitude: -180 to 180, latitude: -90 to 90)
-    const [lng, lat] = location.coordinates;
-    if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
-      return res.status(400).json({ message: 'Coordinates must be within valid ranges (longitude: -180 to 180, latitude: -90 to 90)' });
     }
 
     // Create adoption listing
     const adoption = new Adoption({
-      petName,
       petType,
-      petBreed: breed || undefined,
-      petAge: age || undefined,
-      petGender: gender || 'unknown',
-      petColor: color || undefined,
-      petCategory: size || undefined,
+      petBreed: petBreed || undefined,
+      petAge: petAge || undefined,
+      petGender: petGender || 'unknown',
+      petColor: petColor || undefined,
+      petCategory: petCategory || undefined,
       description,
       images: images || [],
-      location,
       adoptionType,
       adoptionFee: adoptionFee || 0,
       isSpayedNeutered: isSpayedNeutered || false,

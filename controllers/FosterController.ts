@@ -228,29 +228,31 @@ async function createFosterRequest(req: NextApiRequest, res: NextApiResponse) {
     console.log('Extracted fields:', { petName, petType, description, location, fosterType, startDate });
     
     // Validate required fields
-    if (!petName || !petType || !description || !location || !fosterType || !startDate) {
-      console.log('Missing required fields:', { petName, petType, description, location, fosterType, startDate });
+    if (!petName || !petType || !description || !fosterType || !startDate) {
+      console.log('Missing required fields:', { petName, petType, description, fosterType, startDate });
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    // Validate location coordinates
-    if (!location.coordinates || location.coordinates.length !== 2 || 
-        (location.coordinates[0] === 0 && location.coordinates[1] === 0)) {
-      console.log('Invalid location coordinates:', location.coordinates);
-      return res.status(400).json({ message: 'Valid location coordinates are required' });
-    }
-    
-    // Validate coordinate ranges (longitude: -180 to 180, latitude: -90 to 90)
-    const [lng, lat] = location.coordinates;
-    if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
-      console.log('Coordinates out of valid range:', { lng, lat });
-      return res.status(400).json({ message: 'Coordinates must be within valid ranges (longitude: -180 to 180, latitude: -90 to 90)' });
+    // Validate location coordinates if provided
+    if (location && location.coordinates) {
+      if (location.coordinates.length !== 2 || 
+          (location.coordinates[0] === 0 && location.coordinates[1] === 0)) {
+        console.log('Invalid location coordinates:', location.coordinates);
+        return res.status(400).json({ message: 'Valid location coordinates are required if location is provided' });
+      }
+      
+      // Validate coordinate ranges (longitude: -180 to 180, latitude: -90 to 90)
+      const [lng, lat] = location.coordinates;
+      if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+        console.log('Coordinates out of valid range:', { lng, lat });
+        return res.status(400).json({ message: 'Coordinates must be within valid ranges (longitude: -180 to 180, latitude: -90 to 90)' });
+      }
     }
 
-    // Validate location address fields
-    if (!location.address || !location.city || !location.state) {
+    // Validate location address fields if location is provided
+    if (location && (!location.address || !location.city || !location.state)) {
       console.log('Missing location fields:', { address: location.address, city: location.city, state: location.state });
-      return res.status(400).json({ message: 'Address, city, and state are required' });
+      return res.status(400).json({ message: 'Address, city, and state are required if location is provided' });
     }
     
     console.log('Validation passed, creating foster request...');

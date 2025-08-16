@@ -3,22 +3,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import axios from "axios";
 import Link from "next/link";
-import dynamic from "next/dynamic";
-
-// Dynamically import LeafletMap to avoid SSR issues
-const LeafletMap = dynamic(() => import("@/components/LeafletMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-96 bg-gray-200 rounded-2xl flex items-center justify-center">
-      <div className="loading-spinner"></div>
-      <p className="ml-4 text-gray-600">Loading map...</p>
-    </div>
-  ),
-});
 
 interface Adoption {
   _id: string;
-  petName: string;
   petType: string;
   petBreed?: string;
   petAge?: string;
@@ -27,13 +14,6 @@ interface Adoption {
   petCategory?: string;
   description: string;
   images: string[];
-  location: {
-    coordinates: [number, number];
-    address: string;
-    city: string;
-    state: string;
-    zipCode?: string;
-  };
   adoptionType: 'permanent' | 'trial' | 'senior' | 'special-needs';
   adoptionFee?: number;
   isSpayedNeutered: boolean;
@@ -79,36 +59,13 @@ export default function AdoptionPage() {
     status: "",
     adoptionType: "",
     petType: "",
-    city: "",
-    state: "",
     hasSpecialNeeds: false,
   });
-  const [showMap, setShowMap] = useState(false);
-  const [userLocation, setUserLocation] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
+  // Map functionality removed since location is no longer tracked
   const [selectedAdoption, setSelectedAdoption] = useState<Adoption | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-
-  // Get user's current location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.log("Error getting location:", error);
-        }
-      );
-    }
-  }, []);
 
   // Fetch adoptions based on filters and search
   useEffect(() => {
@@ -126,8 +83,6 @@ export default function AdoptionPage() {
       if (filters.status) params.append("status", filters.status);
       if (filters.adoptionType) params.append("adoptionType", filters.adoptionType);
       if (filters.petType) params.append("petType", filters.petType);
-      if (filters.city) params.append("city", filters.city);
-      if (filters.state) params.append("state", filters.state);
       if (filters.hasSpecialNeeds) params.append("hasSpecialNeeds", "true");
       params.append("page", currentPage.toString());
       params.append("limit", "10");
@@ -161,8 +116,6 @@ export default function AdoptionPage() {
       status: "",
       adoptionType: "",
       petType: "",
-      city: "",
-      state: "",
       hasSpecialNeeds: false,
     });
     setSearchTerm("");
@@ -210,14 +163,7 @@ export default function AdoptionPage() {
                 Find your perfect companion and give a pet a forever home
               </p>
             </div>
-            <div className="mt-4 md:mt-0 flex space-x-3">
-              <button
-                onClick={() => setShowMap(!showMap)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                {showMap ? "Hide Map" : "Show Map"}
-              </button>
-              
+            <div className="mt-4 md:mt-0">
               {user && (
                 <Link
                   href="/create-adoption"
@@ -246,7 +192,7 @@ export default function AdoptionPage() {
                 name="search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by pet name, description, or breed..."
+                                 placeholder="Search by description or breed..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
@@ -315,38 +261,6 @@ export default function AdoptionPage() {
               </select>
             </div>
 
-            {/* City Filter */}
-            <div>
-              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                City
-              </label>
-              <input
-                type="text"
-                id="city"
-                name="city"
-                value={filters.city}
-                onChange={handleFilterChange}
-                placeholder="Enter city..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            {/* State Filter */}
-            <div>
-              <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                State
-              </label>
-              <input
-                type="text"
-                id="state"
-                name="state"
-                value={filters.state}
-                onChange={handleFilterChange}
-                placeholder="Enter state..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
             {/* Special Needs Filter */}
             <div className="flex items-center">
               <input
@@ -377,25 +291,7 @@ export default function AdoptionPage() {
           </div>
         </div>
 
-        {/* Map View */}
-        {showMap && userLocation && (
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Adoption Locations</h3>
-            <div className="h-96 rounded-lg overflow-hidden">
-              <LeafletMap
-                center={[userLocation.lat, userLocation.lng]}
-                onMapClick={() => {}}
-                markers={[
-                  {
-                    position: [userLocation.lat, userLocation.lng],
-                    popup: 'Your Location'
-                  }
-                ]}
-                height="384px"
-              />
-            </div>
-          </div>
-        )}
+
 
         {/* Results */}
         <div className="space-y-6">
@@ -437,7 +333,7 @@ export default function AdoptionPage() {
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                            {adoption.petName}
+                            {adoption.petType}
                             {adoption.specialNeeds && (
                               <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                 🚨 Special Needs
@@ -445,7 +341,7 @@ export default function AdoptionPage() {
                             )}
                           </h3>
                           <p className="text-gray-600 mb-2">
-                            {adoption.petType} • {adoption.location.city}, {adoption.location.state}
+                            {adoption.petBreed || 'Mixed breed'}
                           </p>
                         </div>
                         <div className="text-right">
@@ -578,7 +474,7 @@ export default function AdoptionPage() {
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-semibold text-gray-900">{selectedAdoption.petName}</h3>
+                <h3 className="text-2xl font-semibold text-gray-900">{selectedAdoption.petType}</h3>
                 <button
                   onClick={() => setSelectedAdoption(null)}
                   className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
@@ -663,11 +559,7 @@ export default function AdoptionPage() {
                   </div>
                 )}
 
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Location</h4>
-                  <p className="text-gray-700">{selectedAdoption.location.address}</p>
-                  <p className="text-gray-600">{selectedAdoption.location.city}, {selectedAdoption.location.state} {selectedAdoption.location.zipCode}</p>
-                </div>
+
 
                 <div className="flex gap-3 pt-4">
                   {user && selectedAdoption.status === 'available' && (

@@ -55,7 +55,7 @@ async function getAdoptionApplications(req: NextApiRequest, res: NextApiResponse
     
     // Get applications with pagination
     const applications = await AdoptionApplication.find(filter)
-      .populate('adoptionId', 'petName petType petBreed status')
+      .populate('adoptionId', 'petType petBreed status')
       .populate('applicantId', 'name email phone')
       .populate('adminId', 'name email')
       .sort({ createdAt: -1 })
@@ -153,7 +153,7 @@ async function createAdoptionApplication(req: NextApiRequest, res: NextApiRespon
     });
 
     // Populate related data
-    await adoptionApplication.populate('adoptionId', 'petName petType petBreed status');
+    await adoptionApplication.populate('adoptionId', 'petType petBreed status');
     await adoptionApplication.populate('applicantId', 'name email phone');
 
     return res.status(201).json({
@@ -204,7 +204,7 @@ async function updateAdoptionApplication(req: NextApiRequest, res: NextApiRespon
         reviewedAt: new Date()
       },
       { new: true }
-    ).populate('adoptionId', 'petName petType petBreed status')
+    ).populate('adoptionId', 'petType petBreed status')
      .populate('applicantId', 'name email phone')
      .populate('adminId', 'name email');
 

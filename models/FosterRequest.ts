@@ -10,11 +10,11 @@ export interface IFosterRequest extends Document {
   petCategory?: string;
   description: string;
   images: string[];
-  location: {
-    coordinates: [number, number]; // [longitude, latitude] for MongoDB 2dsphere
-    address: string;
-    city: string;
-    state: string;
+  location?: {
+    coordinates?: [number, number]; // [longitude, latitude] for MongoDB 2dsphere
+    address?: string;
+    city?: string;
+    state?: string;
     zipCode?: string;
   };
   fosterType: 'temporary' | 'long-term' | 'emergency';
@@ -94,20 +94,20 @@ const FosterRequestSchema = new Schema<IFosterRequest>({
   location: {
     coordinates: {
       type: [Number],
-      required: true,
+      required: false,
       index: '2dsphere'
     },
     address: {
       type: String,
-      required: true
+      required: false
     },
     city: {
       type: String,
-      required: true
+      required: false
     },
     state: {
       type: String,
-      required: true
+      required: false
     },
     zipCode: String
   },

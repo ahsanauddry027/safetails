@@ -1,68 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
-import dynamic from 'next/dynamic';
 import axios from 'axios';
 
-// Dynamically import LeafletMap to avoid SSR issues
-const LeafletMap = dynamic(() => import('../components/LeafletMap'), {
-  ssr: false,
-  loading: () => <div className="h-64 bg-gray-200 animate-pulse rounded-lg"></div>
-});
-
 interface AdoptionForm {
-  petName: string;
   petType: string;
-  breed: string;
-  age: string;
-  gender: 'male' | 'female' | 'unknown';
-  size: 'small' | 'medium' | 'large' | 'giant';
-  color: string;
+  petBreed?: string;
+  petAge?: string;
+  petGender?: string;
+  petColor?: string;
+  petCategory?: string; // Corresponds to size
   description: string;
-  location: {
-    coordinates: [number, number];
-    address: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
+  images: string[];
   adoptionType: 'permanent' | 'trial' | 'senior' | 'special-needs';
   adoptionFee?: number;
   isSpayedNeutered: boolean;
   isVaccinated: boolean;
   isMicrochipped: boolean;
-  specialNeeds: string;
-  medicalHistory: string;
+  specialNeeds?: string;
+  medicalHistory?: string;
   temperament: string[];
   goodWith: {
-    dogs: boolean;
-    cats: boolean;
     children: boolean;
-    seniors: boolean;
+    otherDogs: boolean;
+    otherCats: boolean;
+    otherPets: boolean;
   };
   requirements: string[];
-  images: string[]; // Optional - can be empty array
 }
 
-const CreateAdoption: React.FC = () => {
+const CreateAdoptionPage: React.FC = () => {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [formData, setFormData] = useState<AdoptionForm>({
-    petName: '',
     petType: '',
-    breed: '',
-    age: '',
-    gender: 'unknown',
-    size: 'medium',
-    color: '',
+    petBreed: '',
+    petAge: '',
+    petGender: 'unknown',
+    petColor: '',
+    petCategory: '',
     description: '',
-    location: {
-      coordinates: [0, 0],
-      address: '',
-      city: '',
-      state: '',
-      zipCode: ''
-    },
+    images: [], // Images are not required for now
     adoptionType: 'permanent',
     adoptionFee: undefined,
     isSpayedNeutered: false,
@@ -72,19 +50,16 @@ const CreateAdoption: React.FC = () => {
     medicalHistory: '',
     temperament: [],
     goodWith: {
-      dogs: false,
-      cats: false,
       children: false,
-      seniors: false
+      otherDogs: false,
+      otherCats: false,
+      otherPets: false,
     },
     requirements: [],
-    images: [] // Will remain empty array
   });
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showMap, setShowMap] = useState(false);
 
   const temperamentOptions = [
     'Friendly',
@@ -107,13 +82,11 @@ const CreateAdoption: React.FC = () => {
     'Personal reference required',
     'Fenced yard required',
     'No other pets',
+    'Experienced owner required',
+    'Children over 12 only',
     'No children',
-    'Experience with pets required',
-    'Financial commitment',
-    'Transportation available',
-    'Flexible schedule',
-    'Follow-up visits',
-    'Adoption contract'
+    'Indoor only',
+    'Outdoor access required'
   ];
 
   useEffect(() => {
@@ -122,59 +95,12 @@ const CreateAdoption: React.FC = () => {
     }
   }, [user, loading, router]);
 
-  useEffect(() => {
-    // Get user's current location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          
-          // Validate coordinates
-          if (lat && lng && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-            setFormData(prev => ({
-              ...prev,
-              location: {
-                ...prev.location,
-                // MongoDB 2dsphere expects [longitude, latitude]
-                coordinates: [lng, lat]
-              }
-            }));
-          }
-        },
-        (error) => {
-          console.log('Error getting location:', error);
-          // Set default coordinates if geolocation fails
-          setFormData(prev => ({
-            ...prev,
-            location: {
-              ...prev.location,
-              // MongoDB 2dsphere expects [longitude, latitude]
-              coordinates: [-74.0060, 40.7128] // Default to NYC coordinates
-            }
-          }));
-        }
-      );
-    } else {
-      // Fallback for browsers without geolocation
-      setFormData(prev => ({
-        ...prev,
-        location: {
-          ...prev.location,
-          // MongoDB 2dsphere expects [longitude, latitude]
-          coordinates: [-74.0060, 40.7128] // Default to NYC coordinates
-        }
-      }));
-    }
-  }, []);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
+    const { name, value, type, checked } = e.target as HTMLInputElement;
     
     if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
       if (name.startsWith('goodWith.')) {
-        const field = name.split('.')[1];
+        const field = name.split('.')[1] as keyof typeof formData.goodWith;
         setFormData(prev => ({
           ...prev,
           goodWith: {
@@ -182,21 +108,19 @@ const CreateAdoption: React.FC = () => {
             [field]: checked
           }
         }));
-      } else {
+      } else if (name === 'isSpayedNeutered' || name === 'isVaccinated' || name === 'isMicrochipped') {
         setFormData(prev => ({
           ...prev,
           [name]: checked
         }));
+      } else if (name === 'requirements') {
+        setFormData(prev => ({
+          ...prev,
+          requirements: checked
+            ? [...prev.requirements, value]
+            : prev.requirements.filter(req => req !== value)
+        }));
       }
-    } else if (name.startsWith('location.')) {
-      const field = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        location: {
-          ...prev.location,
-          [field]: value
-        }
-      }));
     } else {
       setFormData(prev => ({
         ...prev,
@@ -223,19 +147,6 @@ const CreateAdoption: React.FC = () => {
     }));
   };
 
-
-
-  const handleMapClick = (lat: number, lng: number) => {
-    setFormData(prev => ({
-      ...prev,
-      location: {
-        ...prev.location,
-        // MongoDB 2dsphere expects [longitude, latitude]
-        coordinates: [lng, lat]
-      }
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -243,6 +154,13 @@ const CreateAdoption: React.FC = () => {
     setSuccess('');
 
     try {
+      console.log('Submitting adoption request with data:', formData);
+      console.log('Required fields check:', {
+        petType: !!formData.petType,
+        description: !!formData.description,
+        adoptionType: !!formData.adoptionType,
+      });
+
       const response = await axios.post('/api/adoption', formData, {
         headers: {
           'Content-Type': 'application/json'
@@ -300,20 +218,6 @@ const CreateAdoption: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pet Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="petName"
-                    value={formData.petName}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Pet Type *
                   </label>
                   <select
@@ -340,8 +244,8 @@ const CreateAdoption: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    name="breed"
-                    value={formData.breed}
+                    name="petBreed"
+                    value={formData.petBreed}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -353,8 +257,8 @@ const CreateAdoption: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    name="age"
-                    value={formData.age}
+                    name="petAge"
+                    value={formData.petAge}
                     onChange={handleInputChange}
                     placeholder="e.g., 2 years, 6 months"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -366,8 +270,8 @@ const CreateAdoption: React.FC = () => {
                     Gender
                   </label>
                   <select
-                    name="gender"
-                    value={formData.gender}
+                    name="petGender"
+                    value={formData.petGender}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -382,8 +286,8 @@ const CreateAdoption: React.FC = () => {
                     Size
                   </label>
                   <select
-                    name="size"
-                    value={formData.size}
+                    name="petCategory"
+                    value={formData.petCategory}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -400,8 +304,8 @@ const CreateAdoption: React.FC = () => {
                   </label>
                   <input
                     type="text"
-                    name="color"
-                    value={formData.color}
+                    name="petColor"
+                    value={formData.petColor}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -563,8 +467,8 @@ const CreateAdoption: React.FC = () => {
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      name="goodWith.dogs"
-                      checked={formData.goodWith.dogs}
+                      name="goodWith.otherDogs"
+                      checked={formData.goodWith.otherDogs}
                       onChange={handleInputChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
@@ -574,8 +478,8 @@ const CreateAdoption: React.FC = () => {
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      name="goodWith.cats"
-                      checked={formData.goodWith.cats}
+                      name="goodWith.otherCats"
+                      checked={formData.goodWith.otherCats}
                       onChange={handleInputChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
@@ -596,12 +500,12 @@ const CreateAdoption: React.FC = () => {
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      name="goodWith.seniors"
-                      checked={formData.goodWith.seniors}
+                      name="goodWith.otherPets"
+                      checked={formData.goodWith.otherPets}
                       onChange={handleInputChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Seniors</span>
+                    <span className="ml-2 text-sm text-gray-700">Other Pets</span>
                   </label>
                 </div>
               </div>
@@ -624,96 +528,6 @@ const CreateAdoption: React.FC = () => {
                 ))}
               </div>
             </div>
-
-            {/* Location */}
-            <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Location</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Address *
-                  </label>
-                  <input
-                    type="text"
-                    name="location.address"
-                    value={formData.location.address}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    City *
-                  </label>
-                  <input
-                    type="text"
-                    name="location.city"
-                    value={formData.location.city}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    State *
-                  </label>
-                  <input
-                    type="text"
-                    name="location.state"
-                    value={formData.location.state}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    ZIP Code
-                  </label>
-                  <input
-                    type="text"
-                    name="location.zipCode"
-                    value={formData.location.zipCode}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowMap(!showMap)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {showMap ? 'Hide Map' : 'Show Map'} (Click to set location)
-                </button>
-              </div>
-
-                             {showMap && (
-                 <div className="mt-4">
-                   <LeafletMap
-                     center={[formData.location.coordinates[1], formData.location.coordinates[0]]}
-                     zoom={13}
-                     onMapClick={handleMapClick}
-                     markers={[
-                       {
-                         position: [formData.location.coordinates[1], formData.location.coordinates[0]],
-                         popup: 'Selected Location'
-                       }
-                     ]}
-                     height="400px"
-                   />
-                 </div>
-               )}
-            </div>
-
-
 
             {/* Submit Button */}
             <div className="flex justify-end space-x-4">
@@ -739,4 +553,4 @@ const CreateAdoption: React.FC = () => {
   );
 };
 
-export default CreateAdoption;
+export default CreateAdoptionPage;

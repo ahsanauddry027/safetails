@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAdoption extends Document {
-  petName: string;
   petType: string;
   petBreed?: string;
   petAge?: string;
@@ -10,13 +9,6 @@ export interface IAdoption extends Document {
   petCategory?: string;
   description: string;
   images: string[];
-  location: {
-    coordinates: [number, number]; // [longitude, latitude] for MongoDB 2dsphere
-    address: string;
-    city: string;
-    state: string;
-    zipCode?: string;
-  };
   adoptionType: 'permanent' | 'trial' | 'senior' | 'special-needs';
   adoptionFee?: number;
   isSpayedNeutered: boolean;
@@ -48,11 +40,6 @@ export interface IAdoption extends Document {
 }
 
 const AdoptionSchema = new Schema<IAdoption>({
-  petName: {
-    type: String,
-    required: true,
-    trim: true
-  },
   petType: {
     type: String,
     required: true,
@@ -86,28 +73,8 @@ const AdoptionSchema = new Schema<IAdoption>({
   },
   images: [{
     type: String,
-    required: true
+    required: false
   }],
-  location: {
-    coordinates: {
-      type: [Number],
-      required: true,
-      index: '2dsphere'
-    },
-    address: {
-      type: String,
-      required: true
-    },
-    city: {
-      type: String,
-      required: true
-    },
-    state: {
-      type: String,
-      required: true
-    },
-    zipCode: String
-  },
   adoptionType: {
     type: String,
     enum: ['permanent', 'trial', 'senior', 'special-needs'],
@@ -203,7 +170,6 @@ AdoptionSchema.pre('save', function(next) {
 
 // Create indexes for efficient queries
 AdoptionSchema.index({ status: 1, createdAt: -1 });
-AdoptionSchema.index({ location: '2dsphere' });
 AdoptionSchema.index({ petType: 1, status: 1 });
 
 export default mongoose.models.Adoption || mongoose.model<IAdoption>('Adoption', AdoptionSchema);

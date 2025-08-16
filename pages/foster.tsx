@@ -27,11 +27,11 @@ interface FosterRequest {
   petCategory?: string;
   description: string;
   images: string[];
-  location: {
-    coordinates: [number, number];
-    address: string;
-    city: string;
-    state: string;
+  location?: {
+    coordinates?: [number, number];
+    address?: string;
+    city?: string;
+    state?: string;
     zipCode?: string;
   };
   fosterType: 'temporary' | 'long-term' | 'emergency';
@@ -440,7 +440,7 @@ export default function FosterPage() {
                             )}
                           </h3>
                           <p className="text-gray-600 mb-2">
-                            {request.petType} • {request.location.city}, {request.location.state}
+                            {request.petType} • {request.location?.city || 'Location not specified'}, {request.location?.state || ''}
                           </p>
                         </div>
                         <div className="text-right">
@@ -610,8 +610,12 @@ export default function FosterPage() {
 
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Location</h4>
-                  <p className="text-gray-700">{selectedRequest.location.address}</p>
-                  <p className="text-gray-600">{selectedRequest.location.city}, {selectedRequest.location.state} {selectedRequest.location.zipCode}</p>
+                                      <p className="text-gray-700">{selectedRequest.location?.address || 'Address not specified'}</p>
+                  <p className="text-gray-600">
+                  {selectedRequest.location?.city || 'Location not specified'}
+                  {selectedRequest.location?.state && `, ${selectedRequest.location.state}`}
+                  {selectedRequest.location?.zipCode && ` ${selectedRequest.location.zipCode}`}
+                </p>
                 </div>
 
                 <div className="flex gap-3 pt-4">
