@@ -105,7 +105,8 @@ const CreateFoster: React.FC = () => {
               ...prev,
               location: {
                 ...prev.location,
-                coordinates: [lat, lng]
+                // MongoDB 2dsphere expects [longitude, latitude]
+                coordinates: [lng, lat]
               }
             }));
           }
@@ -117,7 +118,8 @@ const CreateFoster: React.FC = () => {
             ...prev,
             location: {
               ...prev.location,
-              coordinates: [40.7128, -74.0060] // Default to NYC coordinates
+              // MongoDB 2dsphere expects [longitude, latitude]
+              coordinates: [-74.0060, 40.7128] // Default to NYC coordinates
             }
           }));
         }
@@ -128,7 +130,8 @@ const CreateFoster: React.FC = () => {
         ...prev,
         location: {
           ...prev.location,
-          coordinates: [40.7128, -74.0060] // Default to NYC coordinates
+          // MongoDB 2dsphere expects [longitude, latitude]
+          coordinates: [-74.0060, 40.7128] // Default to NYC coordinates
         }
       }));
     }
@@ -176,7 +179,8 @@ const CreateFoster: React.FC = () => {
       ...prev,
       location: {
         ...prev.location,
-        coordinates: [lat, lng]
+        // MongoDB 2dsphere expects [longitude, latitude]
+        coordinates: [lng, lat]
       }
     }));
   };
@@ -188,6 +192,18 @@ const CreateFoster: React.FC = () => {
     setSuccess('');
 
     try {
+      console.log('Submitting foster request with data:', formData);
+      console.log('Location coordinates:', formData.location.coordinates);
+      console.log('Required fields check:', {
+        petName: !!formData.petName,
+        petType: !!formData.petType,
+        description: !!formData.description,
+        location: !!formData.location,
+        fosterType: !!formData.fosterType,
+        startDate: !!formData.startDate,
+        duration: !!formData.duration
+      });
+      
       const response = await axios.post('/api/foster', formData, {
         headers: {
           'Content-Type': 'application/json'
@@ -199,6 +215,9 @@ const CreateFoster: React.FC = () => {
         router.push('/foster');
       }, 2000);
     } catch (err: any) {
+      console.error('Error creating foster request:', err);
+      console.error('Error response:', err.response);
+      console.error('Error data:', err.response?.data);
       setError(err.response?.data?.message || 'Failed to create foster request');
     } finally {
       setIsSubmitting(false);
@@ -569,22 +588,22 @@ const CreateFoster: React.FC = () => {
                 </button>
               </div>
 
-              {showMap && (
-                <div className="mt-4">
-                  <LeafletMap
-                    center={formData.location.coordinates}
-                    zoom={13}
-                    onMapClick={handleMapClick}
-                    markers={[
-                      {
-                        position: formData.location.coordinates,
-                        popup: 'Selected Location'
-                      }
-                    ]}
-                    height="400px"
-                  />
-                </div>
-              )}
+                             {showMap && (
+                 <div className="mt-4">
+                   <LeafletMap
+                     center={[formData.location.coordinates[1], formData.location.coordinates[0]]}
+                     zoom={13}
+                     onMapClick={handleMapClick}
+                     markers={[
+                       {
+                         position: [formData.location.coordinates[1], formData.location.coordinates[0]],
+                         popup: 'Selected Location'
+                       }
+                     ]}
+                     height="400px"
+                   />
+                 </div>
+               )}
             </div>
 
 

@@ -11,7 +11,7 @@ export interface IFosterRequest extends Document {
   description: string;
   images: string[];
   location: {
-    coordinates: [number, number];
+    coordinates: [number, number]; // [longitude, latitude] for MongoDB 2dsphere
     address: string;
     city: string;
     state: string;
@@ -25,6 +25,12 @@ export interface IFosterRequest extends Document {
   specialNeeds?: string;
   medicalHistory?: string;
   isUrgent: boolean;
+  goodWith?: {
+    dogs: boolean;
+    cats: boolean;
+    children: boolean;
+    seniors: boolean;
+  };
   status: 'pending' | 'active' | 'matched' | 'completed' | 'cancelled';
   userId: mongoose.Types.ObjectId;
   fosterParent?: {
@@ -83,7 +89,7 @@ const FosterRequestSchema = new Schema<IFosterRequest>({
   },
   images: [{
     type: String,
-    required: true
+    required: false
   }],
   location: {
     coordinates: {
@@ -128,6 +134,24 @@ const FosterRequestSchema = new Schema<IFosterRequest>({
   isUrgent: {
     type: Boolean,
     default: false
+  },
+  goodWith: {
+    dogs: {
+      type: Boolean,
+      default: false
+    },
+    cats: {
+      type: Boolean,
+      default: false
+    },
+    children: {
+      type: Boolean,
+      default: false
+    },
+    seniors: {
+      type: Boolean,
+      default: false
+    }
   },
   status: {
     type: String,

@@ -11,7 +11,7 @@ export interface IAdoption extends Document {
   description: string;
   images: string[];
   location: {
-    coordinates: [number, number];
+    coordinates: [number, number]; // [longitude, latitude] for MongoDB 2dsphere
     address: string;
     city: string;
     state: string;

@@ -136,7 +136,8 @@ const CreateAdoption: React.FC = () => {
               ...prev,
               location: {
                 ...prev.location,
-                coordinates: [lat, lng]
+                // MongoDB 2dsphere expects [longitude, latitude]
+                coordinates: [lng, lat]
               }
             }));
           }
@@ -148,7 +149,8 @@ const CreateAdoption: React.FC = () => {
             ...prev,
             location: {
               ...prev.location,
-              coordinates: [40.7128, -74.0060] // Default to NYC coordinates
+              // MongoDB 2dsphere expects [longitude, latitude]
+              coordinates: [-74.0060, 40.7128] // Default to NYC coordinates
             }
           }));
         }
@@ -159,7 +161,8 @@ const CreateAdoption: React.FC = () => {
         ...prev,
         location: {
           ...prev.location,
-          coordinates: [40.7128, -74.0060] // Default to NYC coordinates
+          // MongoDB 2dsphere expects [longitude, latitude]
+          coordinates: [-74.0060, 40.7128] // Default to NYC coordinates
         }
       }));
     }
@@ -227,7 +230,8 @@ const CreateAdoption: React.FC = () => {
       ...prev,
       location: {
         ...prev.location,
-        coordinates: [lat, lng]
+        // MongoDB 2dsphere expects [longitude, latitude]
+        coordinates: [lng, lat]
       }
     }));
   };
@@ -691,22 +695,22 @@ const CreateAdoption: React.FC = () => {
                 </button>
               </div>
 
-              {showMap && (
-                <div className="mt-4">
-                  <LeafletMap
-                    center={formData.location.coordinates}
-                    zoom={13}
-                    onMapClick={handleMapClick}
-                    markers={[
-                      {
-                        position: formData.location.coordinates,
-                        popup: 'Selected Location'
-                      }
-                    ]}
-                    height="400px"
-                  />
-                </div>
-              )}
+                             {showMap && (
+                 <div className="mt-4">
+                   <LeafletMap
+                     center={[formData.location.coordinates[1], formData.location.coordinates[0]]}
+                     zoom={13}
+                     onMapClick={handleMapClick}
+                     markers={[
+                       {
+                         position: [formData.location.coordinates[1], formData.location.coordinates[0]],
+                         popup: 'Selected Location'
+                       }
+                     ]}
+                     height="400px"
+                   />
+                 </div>
+               )}
             </div>
 
 

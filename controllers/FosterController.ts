@@ -4,9 +4,39 @@ import FosterRequest from '@/models/FosterRequest';
 import FosterApplication from '@/models/FosterApplication';
 import User from '@/models/User';
 import { verifyToken } from '@/utils/auth';
+import mongoose from 'mongoose';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  await dbConnect();
+  try {
+    console.log('Connecting to database...');
+    console.log('MongoDB URI:', process.env.MONGODB_URI || 'mongodb://localhost:27017/safetails');
+    await dbConnect();
+    console.log('Database connected successfully');
+    console.log('Mongoose connection state:', mongoose.connection.readyState);
+    console.log('Mongoose connection host:', mongoose.connection.host);
+    console.log('Mongoose connection name:', mongoose.connection.name);
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    console.error('Database error stack:', error.stack);
+    return res.status(500).json({ message: 'Database connection failed' });
+  }
+
+  // Check if cookies middleware is working
+  console.log('Request headers:', req.headers);
+  console.log('Request cookies object:', req.cookies);
+  console.log('Request cookies type:', typeof req.cookies);
+  console.log('Cookie header:', req.headers.cookie);
+  
+  // Try to parse cookies manually if req.cookies is not available
+  if (!req.cookies && req.headers.cookie) {
+    console.log('req.cookies not available, parsing manually from headers');
+    const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, string>);
+    console.log('Manually parsed cookies:', cookies);
+  }
 
   const { method } = req;
 
@@ -22,7 +52,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error) {
     console.error('Foster controller error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error('Controller error stack:', error.stack);
+    console.error('Controller error message:', error.message);
+    console.error('Controller error name:', error.name);
+    return res.status(500).json({ 
+      message: 'Internal server error',
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
 
@@ -96,15 +133,74 @@ async function getFosterRequests(req: NextApiRequest, res: NextApiResponse) {
 // Create a new foster request
 async function createFosterRequest(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Verify authentication
-    const token = req.cookies.token;
+    console.log('=== Foster Request Creation Started ===');
+    console.log('Request method:', req.method);
+    console.log('Request headers:', req.headers);
+    console.log('Request body type:', typeof req.body);
+    console.log('Request body:', req.body);
+    console.log('Request body stringified:', JSON.stringify(req.body, null, 2));
+    console.log('Cookies:', req.cookies);
+    
+    // Check if body is empty or undefined
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.error('Request body is empty or undefined');
+      console.error('Raw body:', req.body);
+      console.error('Body keys:', Object.keys(req.body || {}));
+      return res.status(400).json({ message: 'Request body is required' });
+    }
+    
+    // Check if body is a string (needs parsing)
+    if (typeof req.body === 'string') {
+      console.log('Body is string, attempting to parse as JSON');
+      try {
+        req.body = JSON.parse(req.body);
+        console.log('Body parsed successfully:', req.body);
+      } catch (parseError) {
+        console.error('Failed to parse body as JSON:', parseError);
+        return res.status(400).json({ message: 'Invalid JSON in request body' });
+      }
+    }
+    
+    // Verify authentication - try multiple ways to get the token
+    let token = req.cookies?.token;
+    console.log('Token from req.cookies:', token);
+    
+    // If cookies not available, try parsing from headers
+    if (!token && req.headers.cookie) {
+      console.log('Parsing cookies from headers...');
+      const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      }, {} as Record<string, string>);
+      console.log('Parsed cookies from headers:', cookies);
+      token = cookies.token;
+      console.log('Token from parsed headers:', token);
+    }
+    
     if (!token) {
+      console.log('No token found in cookies or headers');
+      console.log('Available cookies:', req.cookies);
+      console.log('Cookie header:', req.headers.cookie);
+      console.log('All headers:', req.headers);
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const decoded = await verifyToken(token);
-    if (!decoded) {
-      return res.status(401).json({ message: 'Invalid token' });
+    console.log('Token found, verifying...');
+    let decoded: any;
+    try {
+      decoded = await verifyToken(token);
+      if (!decoded) {
+        console.log('Token verification failed - decoded is null/undefined');
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+      
+      console.log('Token verified successfully:', decoded);
+      console.log('Decoded token type:', typeof decoded);
+      console.log('Decoded token keys:', Object.keys(decoded));
+    } catch (verifyError) {
+      console.error('Token verification error:', verifyError);
+      return res.status(401).json({ message: 'Token verification failed' });
     }
 
     const {
@@ -125,27 +221,42 @@ async function createFosterRequest(req: NextApiRequest, res: NextApiResponse) {
       requirements,
       specialNeeds,
       medicalHistory,
-      isUrgent
+      isUrgent,
+      goodWith
     } = req.body;
 
+    console.log('Extracted fields:', { petName, petType, description, location, fosterType, startDate });
+    
     // Validate required fields
     if (!petName || !petType || !description || !location || !fosterType || !startDate) {
+      console.log('Missing required fields:', { petName, petType, description, location, fosterType, startDate });
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
     // Validate location coordinates
     if (!location.coordinates || location.coordinates.length !== 2 || 
         (location.coordinates[0] === 0 && location.coordinates[1] === 0)) {
+      console.log('Invalid location coordinates:', location.coordinates);
       return res.status(400).json({ message: 'Valid location coordinates are required' });
+    }
+    
+    // Validate coordinate ranges (longitude: -180 to 180, latitude: -90 to 90)
+    const [lng, lat] = location.coordinates;
+    if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+      console.log('Coordinates out of valid range:', { lng, lat });
+      return res.status(400).json({ message: 'Coordinates must be within valid ranges (longitude: -180 to 180, latitude: -90 to 90)' });
     }
 
     // Validate location address fields
     if (!location.address || !location.city || !location.state) {
+      console.log('Missing location fields:', { address: location.address, city: location.city, state: location.state });
       return res.status(400).json({ message: 'Address, city, and state are required' });
     }
+    
+    console.log('Validation passed, creating foster request...');
 
     // Create foster request
-    const fosterRequest = new FosterRequest({
+    const fosterRequestData = {
       petName,
       petType,
       petBreed: breed || undefined,
@@ -164,14 +275,50 @@ async function createFosterRequest(req: NextApiRequest, res: NextApiResponse) {
       specialNeeds: specialNeeds || undefined,
       medicalHistory: medicalHistory || undefined,
       isUrgent: isUrgent || false,
+      goodWith: goodWith || {
+        dogs: false,
+        cats: false,
+        children: false,
+        seniors: false
+      },
       userId: decoded.id,
       status: 'pending'
-    });
-
-    await fosterRequest.save();
+    };
+    
+    console.log('Creating foster request with data:', JSON.stringify(fosterRequestData, null, 2));
+    
+    let fosterRequest: any;
+    try {
+      console.log('About to create FosterRequest model...');
+      fosterRequest = new FosterRequest(fosterRequestData);
+      console.log('FosterRequest model created successfully');
+      console.log('Model instance:', fosterRequest);
+      console.log('Model schema:', fosterRequest.schema);
+      
+      console.log('FosterRequest model created, saving...');
+      await fosterRequest.save();
+      console.log('FosterRequest saved successfully');
+      console.log('Saved request ID:', fosterRequest._id);
+    } catch (modelError) {
+      console.error('Model creation/save error:', modelError);
+      console.error('Model error name:', modelError.name);
+      console.error('Model error message:', modelError.message);
+      console.error('Model error stack:', modelError.stack);
+      if (modelError.name === 'ValidationError') {
+        console.error('Validation errors:', modelError.errors);
+        console.error('Validation error details:', JSON.stringify(modelError.errors, null, 2));
+      }
+      throw modelError; // Re-throw to be caught by outer catch
+    }
 
     // Populate user info
-    await fosterRequest.populate('userId', 'name email phone');
+    try {
+      await fosterRequest.populate('userId', 'name email phone');
+      console.log('User info populated successfully');
+    } catch (populateError) {
+      console.error('Error populating user info:', populateError);
+      // Don't fail the request for this, just log it
+    }
 
     return res.status(201).json({
       success: true,
@@ -180,6 +327,31 @@ async function createFosterRequest(req: NextApiRequest, res: NextApiResponse) {
     });
   } catch (error) {
     console.error('Error creating foster request:', error);
-    return res.status(500).json({ message: 'Failed to create foster request' });
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
+    console.error('Error name:', error.name);
+    
+    // Check if it's a validation error
+    if (error.name === 'ValidationError') {
+      console.error('Validation errors:', error.errors);
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: error.errors
+      });
+    }
+    
+    // Check if it's a MongoDB connection error
+    if (error.name === 'MongoNetworkError' || error.name === 'MongoServerSelectionError') {
+      console.error('MongoDB connection error:', error);
+      return res.status(500).json({ 
+        message: 'Database connection failed'
+      });
+    }
+    
+    return res.status(500).json({ 
+      message: 'Failed to create foster request',
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }

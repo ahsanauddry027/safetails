@@ -134,6 +134,18 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
     if (!petName || !petType || !description || !location || !adoptionType) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
+    
+    // Validate location coordinates
+    if (!location.coordinates || location.coordinates.length !== 2 || 
+        (location.coordinates[0] === 0 && location.coordinates[1] === 0)) {
+      return res.status(400).json({ message: 'Valid location coordinates are required' });
+    }
+    
+    // Validate coordinate ranges (longitude: -180 to 180, latitude: -90 to 90)
+    const [lng, lat] = location.coordinates;
+    if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+      return res.status(400).json({ message: 'Coordinates must be within valid ranges (longitude: -180 to 180, latitude: -90 to 90)' });
+    }
 
     // Create adoption listing
     const adoption = new Adoption({
