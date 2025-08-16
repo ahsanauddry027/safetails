@@ -352,9 +352,15 @@ export default function VetDirectory() {
             <h3 className="text-lg font-medium text-gray-900 mb-4">Vet Locations</h3>
             <div className="h-96 rounded-lg overflow-hidden">
               <LeafletMap
-                center={{ lat: userLocation.lat, lng: userLocation.lng }}
-                marker={[userLocation.lng, userLocation.lat]}
+                center={[userLocation.lat, userLocation.lng]}
                 onMapClick={() => {}}
+                markers={[
+                  {
+                    position: [userLocation.lat, userLocation.lng],
+                    popup: 'Your Location'
+                  }
+                ]}
+                height="384px"
               />
             </div>
           </div>

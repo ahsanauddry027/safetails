@@ -28,35 +28,67 @@ const LocationMarker = ({
   return null;
 };
 
+interface MarkerData {
+  position: [number, number];
+  popup?: string;
+}
+
+interface LeafletMapProps {
+  center: [number, number]; // [latitude, longitude]
+  zoom?: number;
+  onMapClick?: (lat: number, lng: number) => void;
+  markers?: MarkerData[];
+  height?: string;
+}
+
 const LeafletMap = ({
   center,
-  marker,
+  zoom = 13,
   onMapClick,
-}: {
-  center: { lat: number; lng: number };
-  marker: [number, number];
-  onMapClick: (lat: number, lng: number) => void;
-}) => {
+  markers = [],
+  height = "400px"
+}: LeafletMapProps) => {
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     setMapReady(true);
   }, []);
 
+  // Ensure center coordinates are valid
+  const validCenter: [number, number] = Array.isArray(center) && center.length === 2 && 
+    typeof center[0] === 'number' && typeof center[1] === 'number' && 
+    !isNaN(center[0]) && !isNaN(center[1]) && 
+    center[0] !== 0 && center[1] !== 0
+    ? center
+    : [0, 0]; // Default to [0, 0] if invalid
+
+  if (!mapReady) {
+    return <div style={{ height, backgroundColor: '#f3f4f6' }} className="animate-pulse rounded-lg" />;
+  }
+
   return (
-    <MapContainer
-      center={center}
-      zoom={15}
-      style={{ width: "100%", height: "100%" }}
-      scrollWheelZoom={true}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <LocationMarker onClick={onMapClick} />
-      <Marker position={{ lat: marker[1], lng: marker[0] }} />
-    </MapContainer>
+    <div style={{ height, width: "100%" }}>
+      <MapContainer
+        center={[validCenter[0], validCenter[1]]}
+        zoom={zoom}
+        style={{ width: "100%", height: "100%" }}
+        scrollWheelZoom={true}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        
+        {onMapClick && <LocationMarker onClick={onMapClick} />}
+        
+        {markers.map((marker, index) => (
+          <Marker 
+            key={index} 
+            position={[marker.position[0], marker.position[1]]}
+          />
+        ))}
+      </MapContainer>
+    </div>
   );
 };
 

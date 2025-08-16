@@ -538,12 +538,15 @@ const PostDetail = () => {
                     className="rounded-2xl overflow-hidden border-2 border-gray-200"
                   >
                     <LeafletMap
-                      center={{
-                        lat: post.location.coordinates[1],
-                        lng: post.location.coordinates[0],
-                      }}
-                      marker={post.location.coordinates}
+                      center={[post.location.coordinates[1], post.location.coordinates[0]]}
                       onMapClick={() => {}} // Read-only map, no click handler needed
+                      markers={[
+                        {
+                          position: [post.location.coordinates[1], post.location.coordinates[0]],
+                          popup: 'Post Location'
+                        }
+                      ]}
+                      height="400px"
                     />
                   </div>
                 </div>

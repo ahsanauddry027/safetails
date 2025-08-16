@@ -693,12 +693,18 @@ const CreatePost = () => {
                 className="rounded-2xl overflow-hidden border-2 border-gray-300"
               >
                 <LeafletMap
-                  center={userLocation || defaultCenter}
-                  marker={[
-                    location.coordinates[0] ?? defaultCenter.lng,
-                    location.coordinates[1] ?? defaultCenter.lat,
-                  ]}
+                  center={userLocation ? [userLocation.lat, userLocation.lng] : [defaultCenter.lat, defaultCenter.lng]}
                   onMapClick={handleMapClick}
+                  markers={[
+                    {
+                      position: [
+                        location.coordinates[0] ?? defaultCenter.lat,
+                        location.coordinates[1] ?? defaultCenter.lng,
+                      ],
+                      popup: 'Selected Location'
+                    }
+                  ]}
+                  height="400px"
                 />
               </div>
 

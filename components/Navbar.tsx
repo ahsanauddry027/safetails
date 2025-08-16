@@ -57,6 +57,18 @@ export default function Navbar() {
           Pet Posts
         </Link>
         <Link
+          href="/foster"
+          className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:text-black transition-all duration-200 font-semibold text-gray-700 hover:shadow-md"
+        >
+          Foster
+        </Link>
+        <Link
+          href="/adoption"
+          className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:text-black transition-all duration-200 font-semibold text-gray-700 hover:shadow-md"
+        >
+          Adoption
+        </Link>
+        <Link
           href="/vet-directory"
           className="px-4 py-2 rounded-xl hover:bg-gray-100 hover:text-black transition-all duration-200 font-semibold text-gray-700 hover:shadow-md"
         >
