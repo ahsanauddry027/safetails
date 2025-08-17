@@ -13,7 +13,7 @@ async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { name, email, password } = req.body;
+  const { name, email, password, phone, address, bio, permissions } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Name, email, and password are required" });
@@ -35,9 +35,18 @@ async function handler(
       email,
       password: hashedPassword,
       role: "admin",
-      phone: "",
-      address: "",
-      bio: "System Administrator"
+      phone: phone || "",
+      address: address || "",
+      bio: bio || "System Administrator",
+      permissions: permissions || {
+        userManagement: true,
+        contentModeration: true,
+        systemSettings: true,
+        analytics: true
+      },
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
     res.status(201).json({
@@ -46,7 +55,11 @@ async function handler(
         id: adminUser._id,
         name: adminUser.name,
         email: adminUser.email,
-        role: adminUser.role
+        role: adminUser.role,
+        phone: adminUser.phone,
+        address: adminUser.address,
+        bio: adminUser.bio,
+        permissions: adminUser.permissions
       }
     });
   } catch (error) {

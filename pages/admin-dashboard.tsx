@@ -7,6 +7,8 @@ import axios from "axios";
 import Notification from "@/components/Notification";
 import CreateAdminModal from "@/components/CreateAdminModal";
 import CommentManagement from "@/components/CommentManagement";
+import AdminManagement from "@/components/AdminManagement";
+import AdminOverview from "@/components/AdminOverview";
 
 interface User {
   id: string;
@@ -94,6 +96,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("all");
   const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
   const [showCommentManagement, setShowCommentManagement] = useState(false);
+  const [showAdminManagement, setShowAdminManagement] = useState(false);
   const [refreshingStats, setRefreshingStats] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
@@ -593,6 +596,12 @@ export default function AdminDashboard() {
               >
                 Create Admin
               </button>
+              <button
+                onClick={() => setShowAdminManagement(true)}
+                className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
+              >
+                Manage Admins
+              </button>
               <Link
                 href="/profile"
                 className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
@@ -611,6 +620,9 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Admin Overview Section */}
+        <AdminOverview onRefresh={fetchUsers} />
+
         {/* Enhanced User Stats Cards */}
         <h2 className="text-3xl font-bold text-black mb-8 flex items-center">
           <svg
@@ -1672,6 +1684,17 @@ export default function AdminDashboard() {
       <CommentManagement
         isOpen={showCommentManagement}
         onClose={() => setShowCommentManagement(false)}
+      />
+
+      {/* Admin Management Modal */}
+      <AdminManagement
+        isOpen={showAdminManagement}
+        onClose={() => setShowAdminManagement(false)}
+        onSuccess={(message) => {
+          showNotification(message, "success");
+          fetchUsers(); // Refresh the user list
+        }}
+        onError={(message) => showNotification(message, "error")}
       />
 
       {/* Notification Component */}

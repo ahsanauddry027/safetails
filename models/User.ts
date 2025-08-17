@@ -11,6 +11,12 @@ const UserSchema = new mongoose.Schema(
     address: { type: String },
     bio: { type: String },
     profileImage: { type: String },
+    permissions: {
+      userManagement: { type: Boolean, default: false },
+      contentModeration: { type: Boolean, default: false },
+      systemSettings: { type: Boolean, default: false },
+      analytics: { type: Boolean, default: false }
+    },
     isActive: { type: Boolean, default: true },
     isBlocked: { type: Boolean, default: false },
     blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
