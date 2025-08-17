@@ -500,22 +500,22 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-black text-white">
+      <footer className="bg-white border-t-2 border-black text-black shadow-2xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Company Info */}
             <div className="lg:col-span-2">
               <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-black text-white border-2 rounded-full flex items-center justify-center mr-4">
-                  <span className="text-2xl font-bold text-black font-display">
+                <div className="w-12 h-12 bg-black text-white border-2 border-black rounded-full flex items-center justify-center mr-4 shadow-lg">
+                  <span className="text-2xl font-bold text-white font-display">
                     ST
                   </span>
                 </div>
-                <h3 className="text-2xl font-bold text-white font-display">
-                  SafeTails
+                <h3 className="text-2xl font-bold text-black font-display">
+                  <span className="text-black">Safe</span>Tails
                 </h3>
               </div>
-              <p className="text-gray-300 text-lg mb-6 leading-relaxed font-body">
+              <p className="text-gray-600 text-lg mb-6 leading-relaxed font-body">
                 Connecting pet lovers, veterinarians, and rescue organizations
                 to help animals in need. Together, we make a difference in the
                 lives of pets and their families.
@@ -523,29 +523,29 @@ export default function Home() {
               <div className="flex space-x-4">
                 <a
                   href="#"
-                  className="group w-12 h-12 bg-black text-white border-2 rounded-full flex items-center justify-center"
+                  className="group w-12 h-12 bg-black text-white border-2 border-black rounded-full flex items-center justify-center hover:bg-gray-800 hover:scale-110 transition-all duration-300 shadow-lg"
                 >
-                  <span className="text-2xl font-bold text-black">𝕏</span>
+                  <span className="text-xl font-bold text-white">𝕏</span>
                 </a>
                 <a
                   href="#"
-                  className="group w-12 h-12 bg-black text-white border-2 rounded-full flex items-center justify-center"
+                  className="group w-12 h-12 bg-black text-white border-2 border-black rounded-full flex items-center justify-center hover:bg-gray-800 hover:scale-110 transition-all duration-300 shadow-lg"
                 >
-                  <span className="text-2xl font-bold text-black">f</span>
+                  <span className="text-xl font-bold text-white">f</span>
                 </a>
                 <a
                   href="#"
-                  className="group w-12 h-12 bg-black text-white border-2 rounded-full flex items-center justify-center"
+                  className="group w-12 h-12 bg-black text-white border-2 border-black rounded-full flex items-center justify-center hover:bg-gray-800 hover:scale-110 transition-all duration-300 shadow-lg"
                 >
-                  <span className="text-2xl font-bold text-black">In</span>
+                  <span className="text-xl font-bold text-white">In</span>
                 </a>
               </div>
             </div>
 
             <div>
-              <h4 className="text-xl font-bold text-white mb-6 flex items-center">
+              <h4 className="text-xl font-bold text-black mb-6 flex items-center">
                 <svg
-                  className="w-5 h-5 mr-2"
+                  className="w-5 h-5 mr-2 text-black"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -563,45 +563,45 @@ export default function Home() {
                 <li>
                   <Link
                     href="/posts"
-                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group"
+                    className="text-gray-600 hover:text-black transition-colors duration-300 flex items-center group font-medium"
                   >
-                    <span className="w-2 h-2 bg-white rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
+                    <span className="w-2 h-2 bg-black rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
                     Pet Posts
                   </Link>
                 </li>
                 <li>
                   <Link
                     href="/create-post"
-                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group"
+                    className="text-gray-600 hover:text-black transition-colors duration-300 flex items-center group font-medium"
                   >
-                    <span className="w-2 h-2 bg-white rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
+                    <span className="w-2 h-2 bg-black rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
                     Create Post
                   </Link>
                 </li>
                 <li>
                   <Link
-                    href="/profile"
-                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group"
+                    href="/foster"
+                    className="text-gray-600 hover:text-black transition-colors duration-300 flex items-center group font-medium"
                   >
-                    <span className="w-2 h-2 bg-white rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
-                    My Profile
+                    <span className="w-2 h-2 bg-black rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
+                    Foster
                   </Link>
                 </li>
                 <li>
                   <Link
-                    href="/vet-dashboard"
-                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group"
+                    href="/adoption"
+                    className="text-gray-600 hover:text-black transition-colors duration-300 flex items-center group font-medium"
                   >
-                    <span className="w-2 h-2 bg-white rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
-                    Vet Dashboard
+                    <span className="w-2 h-2 bg-black rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
+                    Adoption
                   </Link>
                 </li>
                 <li>
                   <Link
                     href="/vet-directory"
-                    className="text-gray-300 hover:text-white transition-colors duration-300 flex items-center group"
+                    className="text-gray-600 hover:text-black transition-colors duration-300 flex items-center group font-medium"
                   >
-                    <span className="w-2 h-2 bg-white rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
+                    <span className="w-2 h-2 bg-black rounded-full mr-3 group-hover:scale-150 transition-transform duration-300"></span>
                     Vet Directory
                   </Link>
                 </li>
@@ -610,9 +610,9 @@ export default function Home() {
 
             {/* Contact Info */}
             <div>
-              <h4 className="text-xl font-bold text-white mb-6 flex items-center">
+              <h4 className="text-xl font-bold text-black mb-6 flex items-center">
                 <svg
-                  className="w-5 h-5 mr-2"
+                  className="w-5 h-5 mr-2 text-black"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -627,9 +627,9 @@ export default function Home() {
                 Contact Us
               </h4>
               <ul className="space-y-3">
-                <li className="flex items-center text-gray-300">
+                <li className="flex items-center text-gray-600">
                   <svg
-                    className="w-5 h-5 mr-3 text-white"
+                    className="w-5 h-5 mr-3 text-black"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -643,9 +643,9 @@ export default function Home() {
                   </svg>
                   <span>ahsanauddry.ndc@gmail.com</span>
                 </li>
-                <li className="flex items-center text-gray-300">
+                <li className="flex items-center text-gray-600">
                   <svg
-                    className="w-5 h-5 mr-3 text-white"
+                    className="w-5 h-5 mr-3 text-black"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -659,9 +659,9 @@ export default function Home() {
                   </svg>
                   <span>+8801601-580044</span>
                 </li>
-                <li className="flex items-center text-gray-300">
+                <li className="flex items-center text-gray-600">
                   <svg
-                    className="w-5 h-5 mr-3 text-white"
+                    className="w-5 h-5 mr-3 text-black"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -686,28 +686,28 @@ export default function Home() {
           </div>
 
           {/* Bottom Section */}
-          <div className="border-t border-gray-800 mt-12 pt-8">
+          <div className="border-t-2 border-black mt-12 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
-              <p className="text-gray-400 text-sm mb-4 md:mb-0">
+              <p className="text-gray-600 text-sm mb-4 md:mb-0 font-medium">
                 © 2025 SafeTails. All rights reserved. Making a difference in
                 pet lives.
               </p>
               <div className="flex space-x-6">
                 <Link
                   href="#"
-                  className="text-gray-400 hover:text-white transition-colors duration-300 text-sm"
+                  className="text-gray-600 hover:text-black transition-colors duration-300 text-sm font-medium"
                 >
                   Privacy Policy
                 </Link>
                 <Link
                   href="#"
-                  className="text-gray-400 hover:text-white transition-colors duration-300 text-sm"
+                  className="text-gray-600 hover:text-black transition-colors duration-300 text-sm font-medium"
                 >
                   Terms of Service
                 </Link>
                 <Link
                   href="#"
-                  className="text-gray-400 hover:text-white transition-colors duration-300 text-sm"
+                  className="text-gray-600 hover:text-black transition-colors duration-300 text-sm font-medium"
                 >
                   Cookie Policy
                 </Link>
