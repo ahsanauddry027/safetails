@@ -61,6 +61,7 @@ export default async function handler(
     const reports = await Report.find({})
       .populate("postId", "title images")
       .populate("reportedBy", "name email")
+      .populate("reviewedBy", "name")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);

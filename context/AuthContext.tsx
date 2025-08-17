@@ -37,7 +37,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     axios
       .get("/api/auth/me")
       .then((res) => {
-        setUser(res.data.user);
+        console.log("🔍 API response user object:", res.data.user);
+        // Transform the user object to ensure it has an 'id' property
+        const userData = res.data.user;
+        if (userData && userData._id && !userData.id) {
+          userData.id = userData._id;
+        }
+        console.log("🔍 Transformed user object:", userData);
+        setUser(userData);
       })
       .catch((error) => {
         // If user is blocked, clear the user state and redirect to login
@@ -60,7 +67,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       const res = await axios.post("/api/auth/login", { email, password });
-      setUser(res.data.user);
+      console.log("🔍 Login response user object:", res.data.user);
+      // Transform the user object to ensure it has an 'id' property
+      const userData = res.data.user;
+      if (userData && userData._id && !userData.id) {
+        userData.id = userData._id;
+      }
+      console.log("🔍 Transformed login user object:", userData);
+      setUser(userData);
     } catch (error) {
       // Propagate the error to be handled by the login component
       throw error;
@@ -74,7 +88,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfile = async (profileData: Partial<User>) => {
     const res = await axios.put("/api/profile/update", profileData);
-    setUser(res.data.user);
+    // Transform the user object to ensure it has an 'id' property
+    const userData = res.data.user;
+    if (userData && userData._id && !userData.id) {
+      userData.id = userData._id;
+    }
+    setUser(userData);
   };
 
   const deleteProfile = async () => {

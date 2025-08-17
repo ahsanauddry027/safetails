@@ -58,6 +58,12 @@ interface Report {
   reason: string;
   description?: string;
   status: "pending" | "reviewed" | "resolved";
+  adminNotes?: string;
+  reviewedBy?: {
+    _id: string;
+    name: string;
+  };
+  reviewedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -123,36 +129,52 @@ export default function AdminDashboard() {
     if (!loading && !user) {
       router.push("/login");
     } else if (user && user.role !== "admin") {
-      console.error("❌ User is not admin:", { userId: user?.id, userRole: user?.role, userEmail: user?.email });
-      showNotification(`Access denied. Your role is: ${user?.role}. Admin role required.`, "error");
+      console.error("❌ User is not admin:", {
+        userId: user?.id,
+        userRole: user?.role,
+        userEmail: user?.email,
+      });
+      showNotification(
+        `Access denied. Your role is: ${user?.role}. Admin role required.`,
+        "error"
+      );
       router.push("/");
     }
   }, [user, loading, router]);
 
   useEffect(() => {
-    console.log("🔍 User state changed:", { 
-      userId: user?.id, 
-      userRole: user?.role, 
-      userEmail: user?.email, 
+    console.log("🔍 User state changed:", {
+      userId: user?.id,
+      userRole: user?.role,
+      userEmail: user?.email,
       loading,
-      isAdmin: user?.role === "admin"
+      isAdmin: user?.role === "admin",
     });
-    
+
     if (user?.role === "admin") {
       console.log("✅ User is admin, fetching data...");
       console.log("🔍 Starting data fetch operations...");
-      
+
       // Fetch data with error handling
       Promise.allSettled([
-        fetchUsers().catch(err => console.error("❌ Failed to fetch users:", err)),
-        fetchPostStats().catch(err => console.error("❌ Failed to fetch post stats:", err)),
-        fetchReports().catch(err => console.error("❌ Failed to fetch reports:", err))
-      ]).then(results => {
-        console.log("📊 Data fetch results:", results.map((result, index) => ({
-          operation: ["users", "postStats", "reports"][index],
-          status: result.status,
-          error: result.status === "rejected" ? result.reason : null
-        })));
+        fetchUsers().catch((err) =>
+          console.error("❌ Failed to fetch users:", err)
+        ),
+        fetchPostStats().catch((err) =>
+          console.error("❌ Failed to fetch post stats:", err)
+        ),
+        fetchReports().catch((err) =>
+          console.error("❌ Failed to fetch reports:", err)
+        ),
+      ]).then((results) => {
+        console.log(
+          "📊 Data fetch results:",
+          results.map((result, index) => ({
+            operation: ["users", "postStats", "reports"][index],
+            status: result.status,
+            error: result.status === "rejected" ? result.reason : null,
+          }))
+        );
       });
     } else {
       console.log("❌ User is not admin, cannot fetch data");
@@ -290,24 +312,30 @@ export default function AdminDashboard() {
     try {
       setReportsLoading(true);
       console.log("🔍 Fetching reports for page:", page);
-      
+
       // Use admin reports endpoint instead of public reports endpoint
-      const response = await axios.get(`/api/admin/reports?page=${page}&limit=10`, {
-        withCredentials: true,
-      });
+      const response = await axios.get(
+        `/api/admin/reports?page=${page}&limit=10`,
+        {
+          withCredentials: true,
+        }
+      );
 
       if (response.data.success) {
         setReports(response.data.data);
         setReportsTotalPages(response.data.pagination.totalPages);
         setReportsTotal(response.data.pagination.total);
         setReportsPage(page);
-        console.log("✅ Reports fetched successfully:", response.data.data.length);
+        console.log(
+          "✅ Reports fetched successfully:",
+          response.data.data.length
+        );
       }
     } catch (error: unknown) {
       console.error("❌ Error fetching reports:", error);
-      
+
       // Type-safe error handling
-      if (error && typeof error === 'object' && 'response' in error) {
+      if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as {
           response?: {
             status?: number;
@@ -316,22 +344,31 @@ export default function AdminDashboard() {
           };
           message?: string;
         };
-        
+
         console.error("❌ Error details:", {
           status: axiosError.response?.status,
           statusText: axiosError.response?.statusText,
           data: axiosError.response?.data,
-          message: axiosError.message
+          message: axiosError.message,
         });
-        
+
         if (axiosError.response?.status === 403) {
-          showNotification("Access denied. You don't have permission to view reports. Please check your admin role.", "error");
+          showNotification(
+            "Access denied. You don't have permission to view reports. Please check your admin role.",
+            "error"
+          );
         } else {
-          showNotification(`Failed to fetch reports: ${getErrorMessage(error)}`, "error");
+          showNotification(
+            `Failed to fetch reports: ${getErrorMessage(error)}`,
+            "error"
+          );
         }
       } else {
         console.error("❌ Unknown error type:", error);
-        showNotification(`Failed to fetch reports: ${getErrorMessage(error)}`, "error");
+        showNotification(
+          `Failed to fetch reports: ${getErrorMessage(error)}`,
+          "error"
+        );
       }
     } finally {
       setReportsLoading(false);
@@ -340,16 +377,44 @@ export default function AdminDashboard() {
 
   const handleReportStatusUpdate = async (reportId: string, status: string) => {
     try {
-      if (!user?.id) {
-        throw new Error("User not authenticated");
+      console.log("🔍 handleReportStatusUpdate called with:", {
+        reportId,
+        status,
+        user,
+      });
+      console.log("🔍 User object structure:", {
+        hasId: !!user?.id,
+        hasUnderscoreId: !!(user && (user as { _id?: string })._id),
+        idValue: user?.id,
+        underscoreIdValue: (user as Partial<User> & { _id?: string })?._id,
+        userKeys: user ? Object.keys(user) : [],
+      });
+
+      // Check for user authentication with better debugging
+      if (!user) {
+        console.error("❌ User object is null or undefined");
+        throw new Error("User not authenticated - user object is null");
       }
+
+      // Get the user ID from the user object - try both id and _id in a type-safe way
+      const userId =
+        user.id ||
+        (typeof (user as { _id?: string })._id === "string"
+          ? (user as { _id?: string })._id
+          : undefined);
+      if (!userId) {
+        console.error("❌ User ID not found in user object:", user);
+        throw new Error("User not authenticated - user ID not found");
+      }
+
+      console.log("✅ User authenticated, proceeding with ID:", userId);
 
       // Use admin reports update endpoint instead of public reports endpoint
       const response = await axios.put(
         `/api/admin/reports/${reportId}`,
         {
           status,
-          reviewedBy: user.id,
+          reviewedBy: userId,
         },
         {
           withCredentials: true,
@@ -362,9 +427,153 @@ export default function AdminDashboard() {
 
       return response.data;
     } catch (error) {
-      console.error("Failed to update report:", error);
+      console.error("❌ Failed to update report:", error);
       showNotification(getErrorMessage(error), "error");
       throw error;
+    }
+  };
+
+  const handlePostAction = async (
+    reportId: string,
+    postId: string,
+    action: "approve" | "delete"
+  ) => {
+    try {
+      console.log("🔍 Handling post action:", { reportId, postId, action });
+
+      // Validate inputs and user authentication
+      if (!reportId || !postId) {
+        showNotification("Invalid report or post ID", "error");
+        return;
+      }
+
+      if (!user) {
+        showNotification("User not authenticated", "error");
+        return;
+      }
+
+      console.log("🔍 User object in handlePostAction:", {
+        hasId: !!user?.id,
+        hasUnderscoreId: !!(user as Partial<User> & { _id?: string })?._id,
+        idValue: user?.id,
+        underscoreIdValue: (user as Partial<User> & { _id?: string })?._id,
+      });
+
+      if (action === "approve") {
+        // Approve the post - mark report as resolved
+        await axios.put(
+          `/api/admin/reports/${reportId}`,
+          {
+            status: "resolved",
+            reviewedBy: user.id,
+            adminNotes: "Post approved and kept",
+          },
+          {
+            withCredentials: true,
+          }
+        );
+
+        showNotification("Post approved and kept successfully", "success");
+      } else if (action === "delete") {
+        try {
+          // Delete the post
+          await axios.delete(`/api/admin/posts/${postId}`);
+
+          // Mark report as resolved
+          await axios.put(
+            `/api/admin/reports/${reportId}`,
+            {
+              status: "resolved",
+              reviewedBy: user.id,
+              adminNotes: "Post deleted due to violation",
+            },
+            {
+              withCredentials: true,
+            }
+          );
+
+          showNotification("Post deleted successfully", "success");
+        } catch (deleteError: unknown) {
+          if (
+            deleteError &&
+            typeof deleteError === "object" &&
+            "response" in deleteError &&
+            deleteError.response &&
+            typeof deleteError.response === "object" &&
+            "status" in deleteError.response &&
+            deleteError.response.status === 404
+          ) {
+            // Post was already deleted, just mark report as resolved
+            await axios.put(
+              `/api/admin/reports/${reportId}`,
+              {
+                status: "resolved",
+                reviewedBy: user.id,
+                adminNotes: "Post was already deleted",
+              },
+              {
+                withCredentials: true,
+              }
+            );
+            showNotification(
+              "Post was already deleted, report marked as resolved",
+              "info"
+            );
+          } else {
+            throw deleteError; // Re-throw other errors
+          }
+        }
+      }
+
+      // Refresh the reports list
+      await fetchReports(reportsPage);
+    } catch (error) {
+      console.error("❌ Error handling post action:", error);
+      showNotification(
+        `Failed to ${action} post: ${getErrorMessage(error)}`,
+        "error"
+      );
+    }
+  };
+
+  // Clear all reports function
+  const clearAllReports = async () => {
+    try {
+      if (!user) {
+        showNotification("User not authenticated", "error");
+        return;
+      }
+
+      // Delete all reports permanently from the database
+      const deletePromises = reports.map(async (report) => {
+        try {
+          await axios.delete(
+            `/api/admin/reports/${report._id}`,
+            {
+              withCredentials: true,
+            }
+          );
+        } catch (error) {
+          console.error(`Failed to delete report ${report._id}:`, error);
+          // Continue with other reports even if one fails
+        }
+      });
+
+      await Promise.allSettled(deletePromises);
+      
+      // Clear the local reports state
+      setReports([]);
+      setReportsTotal(0);
+      setReportsTotalPages(1);
+      setReportsPage(1);
+      
+      showNotification("All reports have been permanently deleted from the database", "success");
+    } catch (error) {
+      console.error("❌ Error clearing all reports:", error);
+      showNotification(
+        `Failed to clear all reports: ${getErrorMessage(error)}`,
+        "error"
+      );
     }
   };
 
@@ -1180,7 +1389,7 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {getFilteredUsers().map((user) => (
-                                         <tr key={user.id}>
+                    <tr key={user.id}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
@@ -1284,9 +1493,9 @@ export default function AdminDashboard() {
                             </svg>
                             {user.isBlocked ? "Unblock" : "Block"}
                           </button>
-                                                     {user.id && (
-                             <button
-                               onClick={() => handleDeleteUser(user.id!)}
+                          {user.id && (
+                            <button
+                              onClick={() => handleDeleteUser(user.id!)}
                               className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 cursor-pointer"
                             >
                               <svg
@@ -1329,22 +1538,14 @@ export default function AdminDashboard() {
                   </p>
                 </div>
                 <button
-                  onClick={() => fetchReports(reportsPage)}
-                  disabled={reportsLoading}
-                  className={`px-4 py-2 text-white rounded-md cursor-pointer ${
-                    reportsLoading
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  onClick={() => {
+                    if (confirm("Are you sure you want to clear all reports? This action cannot be undone.")) {
+                      clearAllReports();
+                    }
+                  }}
+                  className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-md cursor-pointer"
                 >
-                  {reportsLoading ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Refreshing...
-                    </div>
-                  ) : (
-                    "Refresh Reports"
-                  )}
+                  Clear All Reports
                 </button>
               </div>
             </div>
@@ -1403,12 +1604,47 @@ export default function AdminDashboard() {
                         <p className="text-gray-600">{report.reason}</p>
                       </div>
 
+                      {!report.postId && (
+                        <div className="mb-3">
+                          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                            <p className="text-sm text-red-800 font-medium">
+                              ⚠️ Post has been deleted or is no longer available
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       {report.description && (
                         <div className="mb-3">
                           <p className="text-sm font-medium text-gray-700 mb-1">
                             Description:
                           </p>
                           <p className="text-gray-600">{report.description}</p>
+                        </div>
+                      )}
+
+                      {report.adminNotes && (
+                        <div className="mb-3">
+                          <p className="text-sm font-medium text-gray-700 mb-1">
+                            Admin Notes:
+                          </p>
+                          <p className="text-gray-600 bg-gray-50 p-2 rounded border">
+                            {report.adminNotes}
+                          </p>
+                        </div>
+                      )}
+
+                      {report.reviewedBy && (
+                        <div className="mb-3">
+                          <p className="text-sm font-medium text-gray-700 mb-1">
+                            Reviewed by:
+                          </p>
+                          <p className="text-gray-600">
+                            {report.reviewedBy.name} on{" "}
+                            {new Date(
+                              report.reviewedAt || ""
+                            ).toLocaleDateString()}
+                          </p>
                         </div>
                       )}
 
@@ -1433,17 +1669,55 @@ export default function AdminDashboard() {
                             </button>
                           </>
                         )}
-                        <button
-                          onClick={() =>
-                            window.open(
-                              `/posts/${report.postId?._id}`,
-                              "_blank"
-                            )
-                          }
-                          className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
-                        >
-                          View Post
-                        </button>
+                        {report.postId && report.postId._id && (
+                          <button
+                            onClick={() =>
+                              window.open(
+                                `/posts/${report.postId._id}`,
+                                "_blank"
+                              )
+                            }
+                            className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                          >
+                            View Post
+                          </button>
+                        )}
+                        {report.status === "pending" &&
+                          report.postId &&
+                          report.postId._id && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  handlePostAction(
+                                    report._id,
+                                    report.postId._id,
+                                    "approve"
+                                  )
+                                }
+                                className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                              >
+                                Approve Post
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handlePostAction(
+                                    report._id,
+                                    report.postId._id,
+                                    "delete"
+                                  )
+                                }
+                                className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                              >
+                                Delete Post
+                              </button>
+                            </>
+                          )}
+
+                        {report.status === "pending" && !report.postId && (
+                          <div className="text-sm text-gray-500 italic">
+                            Post already deleted - no action needed
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1597,8 +1871,8 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   onClick={() => {
-                                         if (selectedUser.id) {
-                       handleUpdateUser(selectedUser.id, selectedUser);
+                    if (selectedUser.id) {
+                      handleUpdateUser(selectedUser.id, selectedUser);
                     } else {
                       showNotification("User ID is missing.", "error");
                     }
@@ -1652,9 +1926,9 @@ export default function AdminDashboard() {
                   Cancel
                 </button>
                 <button
-                                     onClick={() =>
-                     handleBlockUser(selectedUser.id!, !selectedUser.isBlocked)
-                   }
+                  onClick={() =>
+                    handleBlockUser(selectedUser.id!, !selectedUser.isBlocked)
+                  }
                   className={`px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer ${
                     selectedUser.isBlocked
                       ? "bg-green-600 text-white focus:ring-green-500"
