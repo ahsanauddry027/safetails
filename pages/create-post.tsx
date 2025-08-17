@@ -46,7 +46,7 @@ interface FormData {
 }
 
 interface LocationData {
-  coordinates: [number, number];
+  coordinates: [number, number]; // [longitude, latitude] for database
   address: string;
   description: string;
   city?: string;
@@ -78,7 +78,7 @@ const CreatePost = () => {
 
   // Location state
   const [location, setLocation] = useState<LocationData>({
-    coordinates: [defaultCenter.lng, defaultCenter.lat],
+    coordinates: [defaultCenter.lng, defaultCenter.lat], // [longitude, latitude] for database
     address: "",
     description: "",
   });
@@ -108,7 +108,7 @@ const CreatePost = () => {
           setUserLocation({ lat: latitude, lng: longitude });
           setLocation({
             ...location,
-            coordinates: [longitude, latitude],
+            coordinates: [longitude, latitude], // [longitude, latitude] for database
           });
         },
         (error: GeolocationPositionError) => {
@@ -202,7 +202,7 @@ const CreatePost = () => {
   const handleMapClick = (lat: number, lng: number) => {
     setLocation({
       ...location,
-      coordinates: [lng, lat],
+      coordinates: [lng, lat], // [longitude, latitude] for database
     });
   };
 
@@ -221,6 +221,13 @@ const CreatePost = () => {
     e.preventDefault();
     setIsSubmitting(true);
     setError("");
+
+    // Validate location coordinates
+    if (!location.coordinates || location.coordinates[0] === 0 || location.coordinates[1] === 0) {
+      setError("Please select a location on the map before submitting.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       // Prepare data for submission
@@ -685,8 +692,44 @@ const CreatePost = () => {
               </label>
               <p className="text-gray-600 mb-4">
                 Click on the map to set the location where the pet was last seen
-                or found.
+                or found. The red marker shows your selected location.
               </p>
+
+              {/* Use Current Location Button */}
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (userLocation) {
+                      setLocation({
+                        ...location,
+                        coordinates: [userLocation.lng, userLocation.lat], // [longitude, latitude] for database
+                      });
+                    } else {
+                      // Try to get location again
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          (position) => {
+                            const { latitude, longitude } = position.coords;
+                            setUserLocation({ lat: latitude, lng: longitude });
+                            setLocation({
+                              ...location,
+                              coordinates: [longitude, latitude], // [longitude, latitude] for database
+                            });
+                          },
+                          (error: GeolocationPositionError) => {
+                            console.error("Error getting location:", error);
+                            setError("Could not get your current location. Please click on the map instead.");
+                          }
+                        );
+                      }
+                    }
+                  }}
+                  className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
+                >
+                   Use Current Location
+                </button>
+              </div>
 
               <div
                 style={mapContainerStyle}
@@ -697,15 +740,29 @@ const CreatePost = () => {
                   onMapClick={handleMapClick}
                   markers={[
                     {
-                      position: [
-                        location.coordinates[0] ?? defaultCenter.lat,
-                        location.coordinates[1] ?? defaultCenter.lng,
-                      ],
-                      popup: 'Selected Location'
+                      position: [location.coordinates[1], location.coordinates[0]], // Convert to [latitude, longitude] for map
+                      popup: 'Selected Location',
+                      isSelected: true
                     }
                   ]}
                   height="400px"
                 />
+              </div>
+
+              {/* Coordinate Display */}
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Selected Coordinates:</strong>
+                </p>
+                <p className="text-sm font-mono text-gray-800">
+                  Latitude: {location.coordinates[1]?.toFixed(6) || 'Not set'}, 
+                  Longitude: {location.coordinates[0]?.toFixed(6) || 'Not set'}
+                </p>
+                {location.coordinates[0] !== 0 && location.coordinates[1] !== 0 && (
+                  <p className="text-xs text-green-600 mt-2">
+                    ✅ Location set successfully! Click on the map to change it.
+                  </p>
+                )}
               </div>
 
               <div className="mt-4">

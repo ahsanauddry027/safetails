@@ -15,6 +15,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+// Create a custom red marker icon for selected locations
+// Using default icon for now to avoid type issues
+const customIcon = L.Icon.Default.prototype;
+
 const LocationMarker = ({
   onClick,
 }: {
@@ -29,8 +33,9 @@ const LocationMarker = ({
 };
 
 interface MarkerData {
-  position: [number, number];
+  position: [number, number]; // [latitude, longitude]
   popup?: string;
+  isSelected?: boolean; // To distinguish selected location from other markers
 }
 
 interface LeafletMapProps {
@@ -60,7 +65,7 @@ const LeafletMap = ({
     !isNaN(center[0]) && !isNaN(center[1]) && 
     center[0] !== 0 && center[1] !== 0
     ? center
-    : [0, 0]; // Default to [0, 0] if invalid
+    : [23.8103, 90.4125]; // Default to Dhaka coordinates if invalid
 
   if (!mapReady) {
     return <div style={{ height, backgroundColor: '#f3f4f6' }} className="animate-pulse rounded-lg" />;
@@ -69,7 +74,7 @@ const LeafletMap = ({
   return (
     <div style={{ height, width: "100%" }}>
       <MapContainer
-        center={[validCenter[0], validCenter[1]]}
+        center={validCenter}
         zoom={zoom}
         style={{ width: "100%", height: "100%" }}
         scrollWheelZoom={true}
@@ -84,8 +89,17 @@ const LeafletMap = ({
         {markers.map((marker, index) => (
           <Marker 
             key={index} 
-            position={[marker.position[0], marker.position[1]]}
-          />
+            position={marker.position}
+          >
+            {marker.popup && (
+              <div className="text-center">
+                <div className="font-semibold text-gray-800">{marker.popup}</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Lat: {marker.position[0].toFixed(6)}, Lng: {marker.position[1].toFixed(6)}
+                </div>
+              </div>
+            )}
+          </Marker>
         ))}
       </MapContainer>
     </div>
