@@ -26,22 +26,6 @@ interface NearbyPost {
   };
 }
 
-interface VetConsultantPost {
-  _id: string;
-  petName: string;
-  petType: string;
-  petBreed: string;
-  petAge: string;
-  petGender: string;
-  description: string;
-  createdAt: string;
-  userId?: {
-    name: string;
-  };
-  contactPhone?: string;
-  contactEmail?: string;
-}
-
 interface LocationState {
   lat: number;
   lng: number;
@@ -57,9 +41,6 @@ export default function VetDashboard() {
   });
   const [requests, setRequests] = useState<VetRequest[]>([]);
   const [nearbyPosts, setNearbyPosts] = useState<NearbyPost[]>([]);
-  const [vetConsultantPosts, setVetConsultantPosts] = useState<
-    VetConsultantPost[]
-  >([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState("");
   const [location, setLocation] = useState<LocationState | null>(null);
@@ -155,51 +136,10 @@ export default function VetDashboard() {
     }
   };
 
-  // Fetch vet consultant posts
-  const fetchVetConsultantPosts = async () => {
-    try {
-      const response = await axios.get(
-        "/api/posts?postType=vet-consultant&status=active"
-      );
-      console.log("Vet consultant posts response:", response.data);
-      setVetConsultantPosts(response.data.posts || []);
-    } catch (err) {
-      console.error("Error fetching vet consultant posts:", err);
-    }
-  };
-
-  // Handle resolving a vet consultant post
-  const handleResolveConsultation = async (postId: string) => {
-    if (
-      !confirm("Are you sure you want to resolve and remove this consultation?")
-    ) {
-      return;
-    }
-
-    try {
-      // Delete the post from database
-      await axios.delete(`/api/posts/${postId}`);
-
-      // Update stats to reflect the resolved case
-      setStats((prevStats) => ({
-        ...prevStats,
-        completedCases: prevStats.completedCases + 1,
-        pendingConsultations: Math.max(0, prevStats.pendingConsultations - 1),
-      }));
-
-      // Refresh the vet consultant posts
-      fetchVetConsultantPosts();
-    } catch (err) {
-      console.error("Error resolving consultation:", err);
-      setError("Failed to resolve consultation. Please try again.");
-    }
-  };
-
   // Fetch vet data when component mounts and user is authenticated
   useEffect(() => {
     if (user && user.role === "vet") {
       fetchVetData();
-      fetchVetConsultantPosts();
       getUserLocation();
     }
   }, [user]);

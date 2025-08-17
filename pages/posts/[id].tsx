@@ -246,14 +246,7 @@ const PostDetail = () => {
   const canDeletePost = () => {
     if (!user || !post) return false;
 
-    // Post owner can delete
-    if (
-      post.userId._id ===
-      ((user as AuthUserType)._id ?? (user as AuthUserType).id)
-    )
-      return true;
-
-    // Admins can delete any post
+    // Only admins can delete posts
     if (user.role === "admin") return true;
 
     return false;
