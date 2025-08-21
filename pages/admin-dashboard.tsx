@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import axios from "axios";
 import Notification from "@/components/Notification";
-import CreateAdminModal from "@/components/CreateAdminModal";
+
 import CommentManagement from "@/components/CommentManagement";
 import AdminManagement from "@/components/AdminManagement";
 import AdminOverview from "@/components/AdminOverview";
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockReason, setBlockReason] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+
   const [showCommentManagement, setShowCommentManagement] = useState(false);
   const [showAdminManagement, setShowAdminManagement] = useState(false);
   const [refreshingStats, setRefreshingStats] = useState(false);
@@ -799,12 +799,12 @@ export default function AdminDashboard() {
               >
                 Manage Comments
               </button>
-              <button
-                onClick={() => setShowCreateAdminModal(true)}
+              <Link
+                href="/create-admin"
                 className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
               >
                 Create Admin
-              </button>
+              </Link>
               <button
                 onClick={() => setShowAdminManagement(true)}
                 className="px-8 py-4 text-white bg-black border-2 border-white rounded-2xl font-bold text-lg"
@@ -1943,16 +1943,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Create Admin Modal */}
-      <CreateAdminModal
-        isOpen={showCreateAdminModal}
-        onClose={() => setShowCreateAdminModal(false)}
-        onSuccess={(message) => {
-          showNotification(message, "success");
-          fetchUsers(); // Refresh the user list
-        }}
-        onError={(message) => showNotification(message, "error")}
-      />
+
 
       {/* Comment Management Modal */}
       <CommentManagement

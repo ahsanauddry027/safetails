@@ -12,10 +12,10 @@ const UserSchema = new mongoose.Schema(
     bio: { type: String },
     profileImage: { type: String },
     permissions: {
-      userManagement: { type: Boolean, default: false },
-      contentModeration: { type: Boolean, default: false },
-      systemSettings: { type: Boolean, default: false },
-      analytics: { type: Boolean, default: false }
+      userManagement: { type: Boolean, default: true },
+      contentModeration: { type: Boolean, default: true },
+      systemSettings: { type: Boolean, default: true },
+      analytics: { type: Boolean, default: true }
     },
     isActive: { type: Boolean, default: true },
     isBlocked: { type: Boolean, default: false },

@@ -36,8 +36,8 @@ export default function Notification({
     switch (type) {
       case "success":
         return (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
           </svg>
         );
       case "error":
@@ -58,7 +58,7 @@ export default function Notification({
   const getStyles = () => {
     switch (type) {
       case "success":
-        return "bg-green-50 border-green-200 text-green-800";
+        return "bg-green-100 border-green-300 text-green-800 shadow-green-100";
       case "error":
         return "bg-red-50 border-red-200 text-red-800";
       default:
@@ -67,15 +67,15 @@ export default function Notification({
   };
 
   return (
-    <div className={`fixed top-4 right-4 z-50 transition-all duration-300 ${
-      isShowing ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
+    <div className={`fixed top-4 right-4 z-50 transition-all duration-500 ${
+      isShowing ? "opacity-100 translate-x-0 scale-100" : "opacity-0 translate-x-full scale-95"
     }`}>
-      <div className={`flex items-center p-4 border rounded-lg shadow-lg max-w-sm ${getStyles()}`}>
-        <div className="flex-shrink-0 mr-3">
+      <div className={`flex items-center p-4 border-2 rounded-xl shadow-lg max-w-sm ${getStyles()}`}>
+        <div className={`flex-shrink-0 mr-3 ${type === 'success' ? 'text-green-600' : ''}`}>
           {getIcon()}
         </div>
         <div className="flex-1">
-          <p className="text-sm font-medium">{message}</p>
+          <p className={`text-sm font-semibold ${type === 'success' ? 'text-green-900' : ''}`}>{message}</p>
         </div>
         <button
           onClick={() => {
