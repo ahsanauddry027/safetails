@@ -252,7 +252,10 @@ export class PetPostController {
           },
         },
         { new: true }
-      ).populate("comments.userId", "name email profileImage");
+      ).populate([
+        { path: "userId", select: "name email profileImage" },
+        { path: "comments.userId", select: "name email profileImage" }
+      ]);
 
       return updatedPost;
     } catch (error) {

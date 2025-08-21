@@ -46,7 +46,7 @@ const PostDetail = () => {
   };
 
   type CommentType = {
-    user: UserType;
+    userId: UserType;
     text: string;
     createdAt: string;
   };
@@ -130,18 +130,35 @@ const PostDetail = () => {
     if (!commentText.trim()) return;
 
     setSubmittingComment(true);
+    setError(""); // Clear any previous errors
 
     try {
-      await axios.patch(`/api/posts/${id}`, {
+      const response = await axios.patch(`/api/posts/${id}`, {
         action: "comment",
-        comment: commentText,
+        text: commentText,
       });
 
-      setCommentText("");
-      fetchPost(); // Refresh post data to show new comment
-    } catch (err) {
+      if (response.data.success) {
+        setCommentText("");
+        fetchPost(); // Refresh post data to show new comment
+      } else {
+        setError(response.data.message || "Failed to submit comment. Please try again.");
+      }
+    } catch (err: any) {
       console.error("Error submitting comment:", err);
-      setError("Failed to submit comment. Please try again.");
+      let errorMessage = "Failed to submit comment. Please try again.";
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.status === 400) {
+        errorMessage = "Invalid comment data. Please check your input.";
+      } else if (err.response?.status === 401) {
+        errorMessage = "Please log in to comment.";
+      } else if (err.response?.status === 403) {
+        errorMessage = "You are not authorized to comment on this post.";
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmittingComment(false);
     }
@@ -381,11 +398,7 @@ const PostDetail = () => {
                     Pet Photos ({post.images.length})
                   </h2>
                   
-                  {/* Debug info */}
-                  <div className="mb-4 p-4 bg-gray-100 rounded-lg text-sm text-gray-600">
-                    <p>Debug: Found {post.images.length} images</p>
-                    <p>First image length: {post.images[0]?.length || 0} characters</p>
-                  </div>
+
                   
                   {/* Main Image */}
                   <div className="mb-6">
@@ -606,6 +619,11 @@ const PostDetail = () => {
                 {/* Comment Form */}
                 {user && post.status === "active" && (
                   <form onSubmit={handleCommentSubmit} className="mb-8">
+                    {error && (
+                      <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-red-600 text-sm">{error}</p>
+                      </div>
+                    )}
                     <div className="mb-4">
                       <label
                         htmlFor="comment"
@@ -644,34 +662,34 @@ const PostDetail = () => {
                       <div key={index} className="bg-gray-50 p-6 rounded-2xl border-2 border-gray-200 hover:border-black transition-all duration-300">
                         <div className="flex justify-between items-start mb-4">
                           <div className="flex items-center">
-                            {comment.user.profileImage ? (
+                            {comment.userId?.profileImage ? (
                               <img
-                                src={comment.user.profileImage}
-                                alt={comment?.user?.name?.charAt(0) ?? "?"}
+                                src={comment.userId.profileImage}
+                                alt={comment?.userId?.name?.charAt(0) ?? "?"}
                                 className="w-12 h-12 rounded-full object-cover mr-4 border-2 border-gray-200"
                               />
                             ) : (
                               <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center mr-4 border-2 border-gray-200">
                                 <span className="text-gray-500 font-semibold">
-                                  {comment?.user?.name?.charAt(0) ?? "?"}
+                                  {comment?.userId?.name?.charAt(0) ?? "?"}
                                 </span>
                               </div>
                             )}
                             <div>
                               <p className="font-semibold text-black text-lg">
-                                {comment?.user?.name ?? "?"}
+                                {comment?.userId?.name ?? "?"}
                               </p>
                               <p className="text-sm text-gray-500">
                                 {formatDate(comment.createdAt)}
                               </p>
                             </div>
                           </div>
-                          {comment.user.role === "vet" && (
+                          {comment.userId?.role === "vet" && (
                             <span className="px-3 py-1 text-sm font-semibold rounded-full border bg-blue-100 text-blue-800 border-blue-200">
                               Vet
                             </span>
                           )}
-                          {comment.user.role === "admin" && (
+                          {comment.userId?.role === "admin" && (
                             <span className="px-3 py-1 text-sm font-semibold rounded-full border bg-purple-100 text-purple-800 border-purple-200">
                               Admin
                             </span>
