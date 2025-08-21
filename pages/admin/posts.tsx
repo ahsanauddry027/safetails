@@ -116,20 +116,35 @@ const AdminPostsPage = () => {
     }
   };
 
-  const handleDeletePost = async (postId: string) => {
-    if (!confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
-      return;
-    }
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; postId: string | null; postTitle: string }>({
+    show: false,
+    postId: null,
+    postTitle: ''
+  });
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+
+  const handleDeletePost = async (postId: string, postTitle: string) => {
+    setDeleteConfirm({
+      show: true,
+      postId,
+      postTitle
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.postId) return;
+
+    setDeletingPostId(deleteConfirm.postId);
 
     try {
-      await axios.delete(`/api/posts/${postId}`, {
+      await axios.delete(`/api/posts/${deleteConfirm.postId}`, {
         withCredentials: true
       });
       
       // Remove the post from the local state
-      setPosts(prev => prev.filter(post => post._id !== postId));
+      setPosts(prev => prev.filter(post => post._id !== deleteConfirm.postId));
       
-      // Show success message (you can add a toast notification here)
+      // Show success message
       alert("Post deleted successfully");
     } catch (error) {
       console.error('Error deleting post:', error);
@@ -142,7 +157,14 @@ const AdminPostsPage = () => {
         }
       }
       alert("Failed to delete post. Please try again.");
+    } finally {
+      setDeletingPostId(null);
+      setDeleteConfirm({ show: false, postId: null, postTitle: '' });
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, postId: null, postTitle: '' });
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -277,7 +299,7 @@ const AdminPostsPage = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {posts.map((post) => (
-                    <tr key={post._id} className="hover:bg-gray-50">
+                    <tr key={post._id} className="hover:bg-gray-50 transition-all duration-200 hover:shadow-sm border-l-4 border-l-transparent hover:border-l-blue-500">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <div className="text-sm font-medium text-gray-900 mb-1">{post.title}</div>
@@ -327,15 +349,42 @@ const AdminPostsPage = () => {
                         {formatDate(post.createdAt)}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <Link href={`/posts/${post._id}`} className="text-blue-600 hover:text-blue-900">
+                        <div className="flex space-x-3">
+                          <Link 
+                            href={`/posts/${post._id}`} 
+                            className="group relative inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg transition-all duration-200 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-700 hover:scale-105 transform hover:shadow-md"
+                          >
+                            <svg className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
                             View
                           </Link>
                           <button
-                            onClick={() => handleDeletePost(post._id)}
-                            className="text-red-600 hover:text-red-900"
+                            onClick={() => handleDeletePost(post._id, post.title)}
+                            disabled={deletingPostId === post._id}
+                            className={`group relative inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-md active:scale-95 ${
+                              deletingPostId === post._id
+                                ? 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+                                : 'text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300 hover:text-red-700'
+                            }`}
                           >
-                            Delete
+                            {deletingPostId === post._id ? (
+                              <>
+                                <svg className="animate-spin w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Deleting...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete
+                              </>
+                            )}
                           </button>
                         </div>
                       </td>
@@ -413,6 +462,55 @@ const AdminPostsPage = () => {
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {deleteConfirm.show && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-4 border-gray-200">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                  <svg className="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Post</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Are you sure you want to delete <span className="font-semibold">"{deleteConfirm.postTitle}"</span>? 
+                  This action cannot be undone.
+                </p>
+                <div className="flex space-x-3 justify-center">
+                  <button
+                    onClick={cancelDelete}
+                    className="px-6 py-3 text-gray-700 bg-gray-100 border border-gray-300 rounded-lg font-medium hover:bg-gray-200 transition-colors duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={deletingPostId !== null}
+                    className={`px-6 py-3 text-white border rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 ${
+                      deletingPostId !== null
+                        ? 'bg-gray-400 border-gray-400 cursor-not-allowed'
+                        : 'bg-red-600 border-red-600 hover:bg-red-700'
+                    }`}
+                  >
+                    {deletingPostId !== null ? (
+                      <>
+                        <svg className="animate-spin w-4 h-4 mr-2 inline" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete Post'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
