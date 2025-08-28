@@ -98,14 +98,14 @@ export default function AlertsPage() {
 
     try {
       const params = new URLSearchParams();
-      
+
       if (searchTerm) params.append("search", searchTerm);
       if (filters.type) params.append("type", filters.type);
       if (filters.urgency) params.append("urgency", filters.urgency);
       if (filters.status) params.append("status", filters.status);
       params.append("page", currentPage.toString());
       params.append("limit", "10");
-      
+
       // Add location-based search if user location is available
       if (userLocation) {
         params.append("latitude", userLocation.lat.toString());
@@ -114,7 +114,7 @@ export default function AlertsPage() {
       }
 
       const response = await axios.get(`/api/alerts?${params.toString()}`);
-      
+
       if (response.data.success) {
         setAlerts(response.data.data);
         setTotalPages(response.data.pagination.totalPages);
@@ -150,16 +150,16 @@ export default function AlertsPage() {
   const handleResolveAlert = async (alertId: string) => {
     try {
       await axios.put(`/api/alerts?id=${alertId}`, {
-        status: 'resolved'
+        status: "resolved",
       });
-      
+
       // Update local state
-      setAlerts(prev => prev.map(alert => 
-        alert._id === alertId 
-          ? { ...alert, status: 'resolved' }
-          : alert
-      ));
-      
+      setAlerts((prev) =>
+        prev.map((alert) =>
+          alert._id === alertId ? { ...alert, status: "resolved" } : alert
+        )
+      );
+
       // Refresh the list
       fetchAlerts();
     } catch (err) {
@@ -167,35 +167,42 @@ export default function AlertsPage() {
     }
   };
 
+  const handleViewDetails = (alertId: string) => {
+    const alert = alerts.find((a) => a._id === alertId);
+    if (alert) {
+      setSelectedAlert(alert);
+    }
+  };
+
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
-      case 'critical':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'high':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low':
-        return 'bg-green-100 text-green-800 border-green-200';
+      case "critical":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "high":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "low":
+        return "bg-green-100 text-green-800 border-green-200";
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'lost_pet':
-        return '🐕';
-      case 'found_pet':
-        return '🏠';
-      case 'foster_request':
-        return '🏡';
-      case 'emergency':
-        return '🚨';
-      case 'adoption':
-        return '❤️';
+      case "lost_pet":
+        return "🐕";
+      case "found_pet":
+        return "🏠";
+      case "foster_request":
+        return "🏡";
+      case "emergency":
+        return "🚨";
+      case "adoption":
+        return "❤️";
       default:
-        return '📢';
+        return "📢";
     }
   };
 
@@ -208,7 +215,12 @@ export default function AlertsPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Pet Alerts</h1>
               <p className="mt-2 text-gray-600">
-                Stay informed about nearby pet-related activities and emergencies
+                Stay informed about nearby pet-related activities and
+                emergencies
+              </p>
+              <p className="mt-1 text-sm text-gray-500">
+                Radius filter: Only shows alerts with coverage area ≤ your
+                search radius
               </p>
             </div>
             <div className="mt-4 md:mt-0 flex space-x-3">
@@ -218,7 +230,7 @@ export default function AlertsPage() {
               >
                 {showMap ? "Hide Map" : "Show Map"}
               </button>
-              
+
               {user && (
                 <button
                   onClick={() => setShowCreateModal(true)}
@@ -238,7 +250,10 @@ export default function AlertsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {/* Search */}
             <div className="lg:col-span-2">
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="search"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Search Alerts
               </label>
               <input
@@ -254,7 +269,10 @@ export default function AlertsPage() {
 
             {/* Alert Type Filter */}
             <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="type"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Alert Type
               </label>
               <select
@@ -276,7 +294,10 @@ export default function AlertsPage() {
 
             {/* Urgency Filter */}
             <div>
-              <label htmlFor="urgency" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="urgency"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Urgency
               </label>
               <select
@@ -298,7 +319,10 @@ export default function AlertsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {/* Status Filter */}
             <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="status"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Status
               </label>
               <select
@@ -316,8 +340,14 @@ export default function AlertsPage() {
 
             {/* Radius Slider */}
             <div className="md:col-span-2">
-              <label htmlFor="radius" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="radius"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Search Radius: {radius}km
+                <span className="ml-2 text-xs text-gray-500 font-normal">
+                  (Only shows alerts with radius ≤ {radius}km)
+                </span>
               </label>
               <input
                 type="range"
@@ -338,10 +368,14 @@ export default function AlertsPage() {
             >
               Clear Filters
             </button>
-            
+
             {userLocation && (
               <div className="text-sm text-gray-600">
                 📍 Searching within {radius}km of your location
+                <br />
+                <span className="text-xs text-gray-500">
+                  Only showing alerts with radius ≤ {radius}km
+                </span>
               </div>
             )}
           </div>
@@ -350,7 +384,9 @@ export default function AlertsPage() {
         {/* Map View */}
         {showMap && userLocation && (
           <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Alert Locations</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Alert Locations
+            </h3>
             <div className="h-96 rounded-lg overflow-hidden">
               <LeafletMap
                 center={[userLocation.lat, userLocation.lng]}
@@ -358,12 +394,15 @@ export default function AlertsPage() {
                 markers={[
                   {
                     position: [userLocation.lat, userLocation.lng],
-                    popup: 'Your Location'
+                    popup: "Your Location",
                   },
-                  ...alerts.map(alert => ({
-                    position: [alert.location.coordinates[1], alert.location.coordinates[0]],
-                    popup: `${alert.type.replace('_', ' ')}: ${alert.title}`
-                  }))
+                  ...alerts.map((alert) => ({
+                    position: [
+                      alert.location.coordinates[1],
+                      alert.location.coordinates[0],
+                    ] as [number, number],
+                    popup: `${alert.type.replace("_", " ")}: ${alert.title}`,
+                  })),
                 ]}
                 height="384px"
               />
@@ -390,7 +429,9 @@ export default function AlertsPage() {
             </div>
           ) : alerts.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-gray-500 mb-4">No alerts found matching your criteria.</div>
+              <div className="text-gray-500 mb-4">
+                No alerts found matching your criteria.
+              </div>
               <button
                 onClick={clearFilters}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
@@ -405,7 +446,8 @@ export default function AlertsPage() {
                   Found {total} alert{total !== 1 ? "s" : ""}
                 </h2>
                 <div className="text-sm text-gray-600">
-                  Showing results within {radius}km radius
+                  Showing alerts with radius ≤ {radius}km within your search
+                  area
                 </div>
               </div>
 
@@ -413,7 +455,7 @@ export default function AlertsPage() {
                 <AlertCard
                   key={alert._id}
                   alert={alert}
-                  onViewDetails={setSelectedAlert}
+                  onViewDetails={handleViewDetails}
                   onResolve={handleResolveAlert}
                   showActions={true}
                 />
@@ -431,34 +473,36 @@ export default function AlertsPage() {
                 disabled={currentPage === 1}
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
                   currentPage === 1
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
                 }`}
               >
                 Previous
               </button>
-              
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    currentPage === page
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      currentPage === page
+                        ? "bg-indigo-600 text-white"
+                        : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              )}
+
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
                   currentPage === totalPages
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
                 }`}
               >
                 Next
@@ -475,8 +519,12 @@ export default function AlertsPage() {
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center space-x-3">
-                  <span className="text-3xl">{getTypeIcon(selectedAlert.type)}</span>
-                  <h3 className="text-2xl font-semibold text-gray-900">{selectedAlert.title}</h3>
+                  <span className="text-3xl">
+                    {getTypeIcon(selectedAlert.type)}
+                  </span>
+                  <h3 className="text-2xl font-semibold text-gray-900">
+                    {selectedAlert.title}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setSelectedAlert(null)}
@@ -485,43 +533,78 @@ export default function AlertsPage() {
                   ×
                 </button>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex space-x-2">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getUrgencyColor(selectedAlert.urgency)}`}>
-                    {selectedAlert.urgency.charAt(0).toUpperCase() + selectedAlert.urgency.slice(1)} Urgency
+                  <span
+                    className={`px-2 py-1 text-xs font-semibold rounded-full border ${getUrgencyColor(selectedAlert.urgency)}`}
+                  >
+                    {selectedAlert.urgency.charAt(0).toUpperCase() +
+                      selectedAlert.urgency.slice(1)}{" "}
+                    Urgency
                   </span>
                   <span className="px-2 py-1 text-xs font-semibold rounded-full border bg-gray-100 text-gray-800">
-                    {selectedAlert.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {selectedAlert.type
+                      .replace("_", " ")
+                      .replace(/\b\w/g, (l) => l.toUpperCase())}
                   </span>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Description</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Description
+                  </h4>
                   <p className="text-gray-700">{selectedAlert.description}</p>
                 </div>
 
                 {selectedAlert.petDetails && (
                   <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Pet Details</h4>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Pet Details
+                    </h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div><span className="font-medium">Type:</span> {selectedAlert.petDetails.petType}</div>
-                      {selectedAlert.petDetails.petBreed && <div><span className="font-medium">Breed:</span> {selectedAlert.petDetails.petBreed}</div>}
-                      {selectedAlert.petDetails.petColor && <div><span className="font-medium">Color:</span> {selectedAlert.petDetails.petColor}</div>}
-                      {selectedAlert.petDetails.petAge && <div><span className="font-medium">Age:</span> {selectedAlert.petDetails.petAge}</div>}
+                      <div>
+                        <span className="font-medium">Type:</span>{" "}
+                        {selectedAlert.petDetails.petType}
+                      </div>
+                      {selectedAlert.petDetails.petBreed && (
+                        <div>
+                          <span className="font-medium">Breed:</span>{" "}
+                          {selectedAlert.petDetails.petBreed}
+                        </div>
+                      )}
+                      {selectedAlert.petDetails.petColor && (
+                        <div>
+                          <span className="font-medium">Color:</span>{" "}
+                          {selectedAlert.petDetails.petColor}
+                        </div>
+                      )}
+                      {selectedAlert.petDetails.petAge && (
+                        <div>
+                          <span className="font-medium">Age:</span>{" "}
+                          {selectedAlert.petDetails.petAge}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Location</h4>
-                  <p className="text-gray-700">{selectedAlert.location.address}</p>
-                  <p className="text-gray-600">{selectedAlert.location.city}, {selectedAlert.location.state}</p>
-                  <p className="text-sm text-gray-500">Alert radius: {selectedAlert.location.radius}km</p>
+                  <p className="text-gray-700">
+                    {selectedAlert.location.address}
+                  </p>
+                  <p className="text-gray-600">
+                    {selectedAlert.location.city},{" "}
+                    {selectedAlert.location.state}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Alert radius: {selectedAlert.location.radius}km
+                  </p>
                 </div>
 
                 <div className="flex gap-3 pt-4">
-                  {selectedAlert.status === 'active' && (
+                  {selectedAlert.status === "active" && (
                     <button
                       onClick={() => {
                         handleResolveAlert(selectedAlert._id);

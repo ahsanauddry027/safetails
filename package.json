@@ -10,7 +10,8 @@
     "lint": "next lint",
     "seed:vet-directory": "node scripts/seed-vet-directory.js",
     "create:admin": "node scripts/create-admin.js",
-    "create:admin:simple": "node scripts/create-admin-simple.js"
+    "create:admin:simple": "node scripts/create-admin-simple.js",
+    "migrate:alerts": "node scripts/migrate-alerts.js"
   },
   "dependencies": {
     "axios": "^1.11.0",

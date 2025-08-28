@@ -1,10 +1,17 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IAlert extends Document {
-  type: 'lost_pet' | 'found_pet' | 'foster_request' | 'emergency' | 'adoption' | 'general';
+  type:
+    | "lost_pet"
+    | "found_pet"
+    | "foster_request"
+    | "emergency"
+    | "adoption"
+    | "general";
   title: string;
   description: string;
   location: {
+    type: "Point";
     coordinates: [number, number]; // [longitude, latitude] for MongoDB 2dsphere
     address: string;
     city: string;
@@ -19,10 +26,10 @@ export interface IAlert extends Document {
     petAge?: string;
     petGender?: string;
   };
-  urgency: 'low' | 'medium' | 'high' | 'critical';
-  status: 'active' | 'resolved' | 'expired';
+  urgency: "low" | "medium" | "high" | "critical";
+  status: "active" | "resolved" | "expired";
   createdBy: mongoose.Types.ObjectId;
-  targetAudience: 'all' | 'nearby' | 'specific_area';
+  targetAudience: "all" | "nearby" | "specific_area";
   expiresAt?: Date;
   isActive: boolean;
   notificationSent: boolean;
@@ -33,38 +40,64 @@ export interface IAlert extends Document {
 const AlertSchema = new Schema<IAlert>({
   type: {
     type: String,
-    enum: ['lost_pet', 'found_pet', 'foster_request', 'emergency', 'adoption', 'general'],
-    required: true
+    enum: [
+      "lost_pet",
+      "found_pet",
+      "foster_request",
+      "emergency",
+      "adoption",
+      "general",
+    ],
+    required: true,
   },
   title: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   description: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
   location: {
+    type: {
+      type: String,
+      enum: ["Point"],
+      required: true,
+      default: "Point",
+    },
     coordinates: {
       type: [Number],
-      required: true
+      required: true,
+      validate: {
+        validator: function (v: number[]) {
+          return (
+            v.length === 2 &&
+            v[0] >= -180 &&
+            v[0] <= 180 && // longitude
+            v[1] >= -90 &&
+            v[1] <= 90
+          ); // latitude
+        },
+        message:
+          "Coordinates must be [longitude, latitude] with longitude between -180 and 180, latitude between -90 and 90",
+      },
     },
     address: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     city: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     state: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     zipCode: String,
     radius: {
@@ -72,65 +105,66 @@ const AlertSchema = new Schema<IAlert>({
       required: true,
       min: 1,
       max: 100,
-      default: 10
-    }
+      default: 10,
+    },
   },
   petDetails: {
     petType: String,
     petBreed: String,
     petColor: String,
     petAge: String,
-    petGender: String
+    petGender: String,
   },
   urgency: {
     type: String,
-    enum: ['low', 'medium', 'high', 'critical'],
-    default: 'medium'
+    enum: ["low", "medium", "high", "critical"],
+    default: "medium",
   },
   status: {
     type: String,
-    enum: ['active', 'resolved', 'expired'],
-    default: 'active'
+    enum: ["active", "resolved", "expired"],
+    default: "active",
   },
   createdBy: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: "User",
+    required: true,
   },
   targetAudience: {
     type: String,
-    enum: ['all', 'nearby', 'specific_area'],
-    default: 'nearby'
+    enum: ["all", "nearby", "specific_area"],
+    default: "nearby",
   },
   expiresAt: Date,
   isActive: {
     type: Boolean,
-    default: true
+    default: true,
   },
   notificationSent: {
     type: Boolean,
-    default: false
+    default: false,
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: Date.now
-  }
+    default: Date.now,
+  },
 });
 
 // Update the updatedAt field before saving
-AlertSchema.pre('save', function(next) {
+AlertSchema.pre("save", function (next) {
   this.updatedAt = new Date();
   next();
 });
 
 // Create indexes for efficient queries
-AlertSchema.index({ 'location.coordinates': '2dsphere' });
+AlertSchema.index({ "location.coordinates": "2dsphere" });
 AlertSchema.index({ type: 1, status: 1, isActive: 1 });
 AlertSchema.index({ urgency: 1, createdAt: -1 });
 AlertSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
-export default mongoose.models.Alert || mongoose.model<IAlert>('Alert', AlertSchema);
+export default mongoose.models.Alert ||
+  mongoose.model<IAlert>("Alert", AlertSchema);
