@@ -328,7 +328,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **📧 Email**: ahsanauddry.ndc@gmail.com
 - **🌐 Phone**: +8801601580044
-- **📱 Discord**: [Send Me DM](@ahsanauddry)
+- **📱 Discord**: [Send Me DM](https://discord.com/users/1027544948603617351) (@ahsanauddry)
 - **🐙 GitHub**: [@ahsanauddry027](https://github.com/ahsanauddry027)
 - **🐛 Issues**: [GitHub Issues](https://github.com/ahsanauddry027/safetails/issues)
 
