@@ -1,7 +1,6 @@
-// pages/api/admin/alerts/[id].ts
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import Alert from "@/models/Alert";
+import VetDirectory from "@/models/VetDirectory";
 import { verifyTokenAndCheckBlocked } from "@/utils/auth";
 import User from "@/models/User";
 
@@ -9,7 +8,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== "DELETE") {
+  if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -33,29 +32,16 @@ export default async function handler(
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    const { id } = req.query;
+    // Get total vet directory count
+    const total = await VetDirectory.countDocuments();
 
-    if (!id) {
-      return res.status(400).json({ error: "Alert ID is required" });
-    }
+    const stats = {
+      total,
+    };
 
-    // Check if alert exists
-    const alert = await Alert.findById(id);
-    if (!alert) {
-      return res
-        .status(404)
-        .json({ error: "Alert not found or already deleted" });
-    }
-
-    // Delete the alert completely (hard delete for admin)
-    await Alert.findByIdAndDelete(id);
-
-    return res.status(200).json({
-      success: true,
-      message: "Alert deleted successfully",
-    });
+    return res.status(200).json(stats);
   } catch (error) {
-    console.error("Error deleting alert:", error);
+    console.error("Error fetching vet directory statistics:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

@@ -35,12 +35,12 @@ interface UserStats {
 }
 
 interface PostStats {
-  total: number;
-  missing: number;
-  emergency: number;
-  wounded: number;
-  active: number;
-  resolved: number;
+  petPosts: { total: number };
+  fosterPosts: { total: number };
+  adoptionPosts: { total: number };
+  vetDirectory: { total: number };
+  alerts: { total: number };
+  overall: { totalPosts: number };
 }
 
 interface Report {
@@ -87,12 +87,12 @@ export default function AdminDashboard() {
   });
 
   const [postStats, setPostStats] = useState<PostStats>({
-    total: 0,
-    missing: 0,
-    emergency: 0,
-    wounded: 0,
-    active: 0,
-    resolved: 0,
+    petPosts: { total: 0 },
+    fosterPosts: { total: 0 },
+    adoptionPosts: { total: 0 },
+    vetDirectory: { total: 0 },
+    alerts: { total: 0 },
+    overall: { totalPosts: 0 },
   });
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -256,7 +256,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Fetch post statistics
+  // Fetch comprehensive post statistics
   const fetchPostStats = async () => {
     try {
       setRefreshingStats(true);
@@ -268,11 +268,38 @@ export default function AdminDashboard() {
         return;
       }
 
-      const response = await axios.get("/api/admin/posts/stats", {
-        withCredentials: true,
-      });
-      console.log("Post stats response:", response.data);
-      setPostStats(response.data);
+      // Fetch statistics from all post types
+      const [petStats, fosterStats, adoptionStats, vetStats, alertStats] =
+        await Promise.all([
+          axios.get("/api/admin/posts/stats", { withCredentials: true }),
+          axios.get("/api/admin/foster/stats", { withCredentials: true }),
+          axios.get("/api/admin/adoption/stats", { withCredentials: true }),
+          axios.get("/api/admin/vet-directory/stats", {
+            withCredentials: true,
+          }),
+          axios.get("/api/admin/alerts/stats", { withCredentials: true }),
+        ]);
+
+      // Combine all statistics - only total counts
+      const comprehensiveStats: PostStats = {
+        petPosts: { total: petStats.data.total || 0 },
+        fosterPosts: { total: fosterStats.data.total || 0 },
+        adoptionPosts: { total: adoptionStats.data.total || 0 },
+        vetDirectory: { total: vetStats.data.total || 0 },
+        alerts: { total: alertStats.data.total || 0 },
+        overall: { totalPosts: 0 },
+      };
+
+      // Calculate overall total
+      comprehensiveStats.overall.totalPosts =
+        comprehensiveStats.petPosts.total +
+        comprehensiveStats.fosterPosts.total +
+        comprehensiveStats.adoptionPosts.total +
+        comprehensiveStats.vetDirectory.total +
+        comprehensiveStats.alerts.total;
+
+      console.log("Post stats:", comprehensiveStats);
+      setPostStats(comprehensiveStats);
       showNotification("Post statistics updated successfully", "success");
     } catch (error: unknown) {
       console.error("Error fetching post stats:", error);
@@ -296,11 +323,11 @@ export default function AdminDashboard() {
         } else {
           const errorMessage =
             axiosError.response?.data?.message ||
-            "Failed to fetch post statistics";
+            "Failed to fetch comprehensive statistics";
           showNotification(errorMessage, "error");
         }
       } else {
-        showNotification("Failed to fetch post statistics", "error");
+        showNotification("Failed to fetch comprehensive statistics", "error");
       }
     } finally {
       setRefreshingStats(false);
@@ -1001,9 +1028,7 @@ export default function AdminDashboard() {
 
         {/* Post Stats Cards */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-800">
-            Pet Post Statistics
-          </h2>
+          <h2 className="text-xl font-bold text-gray-800">Post Statistics</h2>
           <button
             onClick={() => {
               // Add a small delay to ensure authentication is ready
@@ -1026,7 +1051,9 @@ export default function AdminDashboard() {
             )}
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+        {/* Post Statistics - Total Numbers Only */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          {/* Pet Posts */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">
               <div className="p-3 bg-purple-100 rounded-full">
@@ -1040,19 +1067,107 @@ export default function AdminDashboard() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                   />
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Posts</p>
+                <p className="text-sm font-medium text-gray-600">Pet Posts</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {postStats.total}
+                  {postStats.petPosts.total}
                 </p>
               </div>
             </div>
           </div>
 
+          {/* Foster Posts */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-blue-100 rounded-full">
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Foster Posts
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {postStats.fosterPosts.total}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Adoption Posts */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-green-100 rounded-full">
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                  />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Adoption Posts
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {postStats.adoptionPosts.total}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Vet Directory */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center">
+              <div className="p-3 bg-indigo-100 rounded-full">
+                <svg
+                  className="w-6 h-6 text-indigo-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Vet Directory
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {postStats.vetDirectory.total}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Alerts */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex items-center">
               <div className="p-3 bg-red-100 rounded-full">
@@ -1071,115 +1186,9 @@ export default function AdminDashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">
-                  Missing Pets
-                </p>
+                <p className="text-sm font-medium text-gray-600">Alerts</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {postStats.missing}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-orange-100 rounded-full">
-                <svg
-                  className="w-6 h-6 text-orange-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Emergency</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {postStats.emergency}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-pink-100 rounded-full">
-                <svg
-                  className="w-6 h-6 text-pink-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Wounded</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {postStats.wounded}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-yellow-100 rounded-full">
-                <svg
-                  className="w-6 h-6 text-yellow-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {postStats.active}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-full">
-                <svg
-                  className="w-6 h-6 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Resolved</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {postStats.resolved}
+                  {postStats.alerts.total}
                 </p>
               </div>
             </div>

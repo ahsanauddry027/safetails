@@ -1,4 +1,4 @@
-// pages/api/admin/alerts/[id].ts
+// pages/api/admin/alerts/index.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Alert from "@/models/Alert";
@@ -9,7 +9,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== "DELETE") {
+  if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
@@ -33,29 +33,40 @@ export default async function handler(
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    const { id } = req.query;
+    // Get all alerts (including inactive ones) for admin management
+    const alerts = await Alert.find({})
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 });
 
-    if (!id) {
-      return res.status(400).json({ error: "Alert ID is required" });
-    }
-
-    // Check if alert exists
-    const alert = await Alert.findById(id);
-    if (!alert) {
-      return res
-        .status(404)
-        .json({ error: "Alert not found or already deleted" });
-    }
-
-    // Delete the alert completely (hard delete for admin)
-    await Alert.findByIdAndDelete(id);
+    // Transform the data to match the frontend expectations
+    const transformedAlerts = alerts.map((alert) => ({
+      _id: alert._id,
+      title: alert.title,
+      description: alert.description,
+      alertType: alert.type || "info",
+      status: alert.status || "active",
+      priority: alert.urgency || "medium",
+      createdAt: alert.createdAt,
+      userId: alert.createdBy
+        ? {
+            _id: alert.createdBy._id,
+            name: alert.createdBy.name,
+            email: alert.createdBy.email,
+          }
+        : {
+            _id: "",
+            name: "Unknown User",
+            email: "unknown@example.com",
+          },
+    }));
 
     return res.status(200).json({
       success: true,
-      message: "Alert deleted successfully",
+      data: transformedAlerts,
+      total: transformedAlerts.length,
     });
   } catch (error) {
-    console.error("Error deleting alert:", error);
+    console.error("Error fetching alerts for admin:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

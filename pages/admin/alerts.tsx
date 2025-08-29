@@ -40,7 +40,7 @@ const AdminAlertsPage = () => {
   const fetchAlerts = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/api/alerts", {
+      const response = await axios.get("/api/admin/alerts", {
         withCredentials: true,
       });
 
