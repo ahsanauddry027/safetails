@@ -340,6 +340,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 [![GitHub stars](https://img.shields.io/github/stars/ahsanauddry027/safetails?style=social)](https://github.com/ahsanauddry027/safetails)
 [![GitHub forks](https://img.shields.io/github/forks/ahsanauddry027/safetails?style=social)](https://github.com/ahsanauddry027/safetails)
-[![GitHub issues](https://github.com/ahsanauddry027/safetails/issues)](https://github.com/ahsanauddry027/safetails/issues)
 
 </div>
