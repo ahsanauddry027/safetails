@@ -1,0 +1,237 @@
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import axios from "axios";
+import Link from "next/link";
+import { useAuth } from "../../context/AuthContext";
+
+type FosterPost = {
+  _id: string;
+  petName: string;
+  petType: string;
+  petBreed: string;
+  fosterType: "temporary" | "permanent" | "emergency";
+  description: string;
+  status: "active" | "inactive" | "completed";
+  isUrgent: boolean;
+  location: {
+    city: string;
+    state: string;
+    address?: string;
+  };
+  createdAt: string;
+  userId: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+};
+
+const AdminFosterPage = () => {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [posts, setPosts] = useState<FosterPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== "admin")) {
+      router.push("/");
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      fetchPosts();
+    }
+  }, [user]);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get("/api/foster", {
+        withCredentials: true,
+      });
+      setPosts(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching foster posts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm("Are you sure you want to delete this foster post?")) {
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/admin/foster/${postId}`, {
+        withCredentials: true,
+      });
+      setPosts((prev) => prev.filter((post) => post._id !== postId));
+      alert("Foster post deleted successfully");
+    } catch (error) {
+      console.error("Error deleting foster post:", error);
+      alert("Failed to delete foster post");
+    }
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "inactive":
+        return "bg-gray-100 text-gray-800";
+      case "completed":
+        return "bg-blue-100 text-blue-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getFosterTypeBadgeClass = (type: string) => {
+    switch (type) {
+      case "temporary":
+        return "bg-yellow-100 text-yellow-800";
+      case "permanent":
+        return "bg-purple-100 text-purple-800";
+      case "emergency":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-blue-100 text-blue-800";
+    }
+  };
+
+  if (authLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user || user.role !== "admin") {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-black">
+            Foster Posts Management
+          </h1>
+          <Link
+            href="/admin-dashboard"
+            className="px-6 py-3 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
+
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-gray-200">
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <p>Loading foster posts...</p>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-gray-500">No foster posts found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Pet Details
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {posts.map((post) => (
+                    <tr key={post._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {post.petName}
+                        </div>
+                        <div className="text-sm text-gray-500 mb-1">
+                          {post.petBreed} • {post.petType}
+                        </div>
+                        <div className="flex space-x-2">
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getFosterTypeBadgeClass(post.fosterType)}`}
+                          >
+                            {post.fosterType.charAt(0).toUpperCase() +
+                              post.fosterType.slice(1)}
+                          </span>
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(post.status)}`}
+                          >
+                            {post.status.charAt(0).toUpperCase() +
+                              post.status.slice(1)}
+                          </span>
+                          {post.isUrgent && (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                              Urgent
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">
+                          {post.userId.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {post.userId.email}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-500">
+                          {post.location.city}, {post.location.state}
+                          {post.location.address && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              {post.location.address}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium">
+                        <div className="flex space-x-3">
+                          <Link
+                            href={`/foster/${post._id}`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View
+                          </Link>
+                          <button
+                            onClick={() => handleDeletePost(post._id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminFosterPage;

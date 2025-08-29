@@ -547,12 +547,9 @@ export default function AdminDashboard() {
       // Delete all reports permanently from the database
       const deletePromises = reports.map(async (report) => {
         try {
-          await axios.delete(
-            `/api/admin/reports/${report._id}`,
-            {
-              withCredentials: true,
-            }
-          );
+          await axios.delete(`/api/admin/reports/${report._id}`, {
+            withCredentials: true,
+          });
         } catch (error) {
           console.error(`Failed to delete report ${report._id}:`, error);
           // Continue with other reports even if one fails
@@ -560,14 +557,17 @@ export default function AdminDashboard() {
       });
 
       await Promise.allSettled(deletePromises);
-      
+
       // Clear the local reports state
       setReports([]);
       setReportsTotal(0);
       setReportsTotalPages(1);
       setReportsPage(1);
-      
-      showNotification("All reports have been permanently deleted from the database", "success");
+
+      showNotification(
+        "All reports have been permanently deleted from the database",
+        "success"
+      );
     } catch (error) {
       console.error("❌ Error clearing all reports:", error);
       showNotification(
@@ -597,30 +597,42 @@ export default function AdminDashboard() {
           </svg>
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Link
             href="/admin/posts"
-            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer"
+            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer hover:bg-gray-800 transition-colors"
           >
             Manage Pet Posts
           </Link>
           <Link
+            href="/admin/foster"
+            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer hover:bg-gray-800 transition-colors"
+          >
+            Manage Foster Posts
+          </Link>
+          <Link
+            href="/admin/adoption"
+            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer hover:bg-gray-800 transition-colors"
+          >
+            Manage Adoption Posts
+          </Link>
+          <Link
+            href="/admin/vet-directory"
+            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer hover:bg-gray-800 transition-colors"
+          >
+            Manage Vet Directory
+          </Link>
+          <Link
+            href="/admin/alerts"
+            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer hover:bg-gray-800 transition-colors"
+          >
+            Manage Alerts
+          </Link>
+          <Link
             href="/posts"
-            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer"
+            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer hover:bg-gray-800 transition-colors"
           >
             View All Posts
-          </Link>
-          <Link
-            href="/posts?postType=emergency"
-            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer"
-          >
-            Emergency Posts
-          </Link>
-          <Link
-            href="/posts?postType=missing"
-            className="block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl font-bold cursor-pointer"
-          >
-            Missing Pet Posts
           </Link>
         </div>
       </div>
@@ -1539,7 +1551,11 @@ export default function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => {
-                    if (confirm("Are you sure you want to clear all reports? This action cannot be undone.")) {
+                    if (
+                      confirm(
+                        "Are you sure you want to clear all reports? This action cannot be undone."
+                      )
+                    ) {
                       clearAllReports();
                     }
                   }}
@@ -1942,8 +1958,6 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-
-
 
       {/* Comment Management Modal */}
       <CommentManagement
