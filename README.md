@@ -336,7 +336,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Made with ❤️ by the SafeTails Team**
+**Made with ❤️ by AHSAN HABIB**
 
 [![GitHub stars](https://img.shields.io/github/stars/ahsanauddry027/safetails?style=social)](https://github.com/ahsanauddry027/safetails)
 [![GitHub forks](https://img.shields.io/github/forks/ahsanauddry027/safetails?style=social)](https://github.com/ahsanauddry027/safetails)
