@@ -1,36 +1,62 @@
-import { Request, Response } from "express";
-import mongoose from "mongoose";
+import { NextApiRequest, NextApiResponse } from "next";
+
 import jwt from "jsonwebtoken";
 import FosterRequest from "../models/FosterRequest";
-
-mongoose.connect(
-  process.env.MONGODB_URI || "mongodb://localhost:27017/safetails"
-);
-
-mongoose.connection.on("error", (error) => {
-  throw new Error(`Database connection failed: ${error.message}`);
-});
+import dbConnect from "../utils/db";
 
 export default class FosterController {
-  static async getFosterRequests(req: Request, res: Response) {
+  static async getFosterRequests(req: NextApiRequest, res: NextApiResponse) {
     try {
-      const { page = 1, limit = 10, status, petType, location } = req.query;
+      await dbConnect();
+
+      const {
+        page = 1,
+        limit = 10,
+        status,
+        petType,
+        search,
+        fosterType,
+        city,
+        state,
+        isUrgent,
+      } = req.query;
       const pageNum = parseInt(page as string);
       const limitNum = parseInt(limit as string);
       const skip = (pageNum - 1) * limitNum;
 
-      const filter: any = {};
+      const filter: Record<string, unknown> = {};
 
       if (status) {
         filter.status = status;
+      }
+
+      if (fosterType) {
+        filter.fosterType = fosterType;
       }
 
       if (petType) {
         filter.petType = petType;
       }
 
-      if (location) {
-        filter["location.city"] = { $regex: location, $options: "i" };
+      if (city) {
+        filter["location.city"] = { $regex: city, $options: "i" };
+      }
+
+      if (state) {
+        filter["location.state"] = { $regex: state, $options: "i" };
+      }
+
+      if (isUrgent === "true") {
+        filter.isUrgent = true;
+      }
+
+      if (search) {
+        const searchRegex = { $regex: search, $options: "i" };
+        filter.$or = [
+          { petName: searchRegex },
+          { description: searchRegex },
+          { petBreed: searchRegex },
+        ];
       }
 
       const total = await FosterRequest.countDocuments(filter);
@@ -47,10 +73,11 @@ export default class FosterController {
           total,
           page: pageNum,
           limit: limitNum,
-          pages: Math.ceil(total / limitNum),
+          totalPages: Math.ceil(total / limitNum),
         },
       });
     } catch (error) {
+      console.error("Error in getFosterRequests:", error);
       res.status(500).json({
         success: false,
         message: "Internal server error",
@@ -58,8 +85,10 @@ export default class FosterController {
     }
   }
 
-  static async createFosterRequest(req: Request, res: Response) {
+  static async createFosterRequest(req: NextApiRequest, res: NextApiResponse) {
     try {
+      await dbConnect();
+
       if (!req.body || Object.keys(req.body).length === 0) {
         return res.status(400).json({
           success: false,
@@ -91,7 +120,9 @@ export default class FosterController {
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+      };
 
       if (!decoded) {
         return res.status(401).json({
@@ -101,36 +132,43 @@ export default class FosterController {
       }
 
       const {
-        title,
         petName,
         petType,
-        breed,
-        age,
-        gender,
+        petBreed,
+        petAge,
+        petGender,
+        petColor,
+        petCategory,
         description,
         images,
         location,
-        contactInfo,
-        fosterDuration,
+        fosterType,
+        duration,
+        startDate,
+        endDate,
         requirements,
         specialNeeds,
+        medicalHistory,
+        isUrgent,
+        goodWith,
       } = body;
 
       if (
-        !title ||
         !petName ||
         !petType ||
         !description ||
-        !images ||
-        !location
+        !fosterType ||
+        !duration ||
+        !startDate
       ) {
         return res.status(400).json({
           success: false,
-          message: "Missing required fields",
+          message:
+            "Missing required fields: petName, petType, description, fosterType, duration, and startDate are required",
         });
       }
 
-      if (location.coordinates) {
+      if (location?.coordinates) {
         const [lng, lat] = location.coordinates;
         if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
           return res.status(400).json({
@@ -140,29 +178,33 @@ export default class FosterController {
         }
       }
 
-      if (location.address && !location.city && !location.state) {
-        return res.status(400).json({
-          success: false,
-          message: "City and state are required when address is provided",
-        });
-      }
-
       const fosterRequest = new FosterRequest({
         userId: decoded.id,
-        title,
         petName,
         petType,
-        breed,
-        age,
-        gender,
+        petBreed,
+        petAge,
+        petGender,
+        petColor,
+        petCategory,
         description,
-        images,
+        images: images || [],
         location,
-        contactInfo,
-        fosterDuration,
-        requirements,
+        fosterType,
+        duration,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : undefined,
+        requirements: requirements || [],
         specialNeeds,
-        status: "active",
+        medicalHistory,
+        isUrgent: isUrgent || false,
+        goodWith: goodWith || {
+          dogs: false,
+          cats: false,
+          children: false,
+          seniors: false,
+        },
+        status: "pending",
       });
 
       await fosterRequest.save();
@@ -176,23 +218,38 @@ export default class FosterController {
         data: populatedRequest,
         message: "Foster request created successfully",
       });
-    } catch (error: any) {
-      if (error.name === "ValidationError") {
-        const validationErrors = Object.values(error.errors).map(
-          (err: any) => err.message
-        );
-        return res.status(400).json({
-          success: false,
-          message: "Validation failed",
-          errors: validationErrors,
-        });
-      }
+    } catch (error: unknown) {
+      console.error("Error in createFosterRequest:", error);
 
-      if (error.name === "MongoError" && error.code === 11000) {
-        return res.status(409).json({
-          success: false,
-          message: "Duplicate foster request",
-        });
+      if (error && typeof error === "object" && "name" in error) {
+        const errorObj = error as {
+          name: string;
+          errors?: Record<string, unknown>;
+          code?: number;
+        };
+
+        if (errorObj.name === "ValidationError") {
+          const validationErrors = Object.values(errorObj.errors || {}).map(
+            (err: unknown) => {
+              if (err && typeof err === "object" && "message" in err) {
+                return (err as { message: string }).message;
+              }
+              return "Validation error";
+            }
+          );
+          return res.status(400).json({
+            success: false,
+            message: "Validation failed",
+            errors: validationErrors,
+          });
+        }
+
+        if (errorObj.name === "MongoError" && errorObj.code === 11000) {
+          return res.status(409).json({
+            success: false,
+            message: "Duplicate foster request",
+          });
+        }
       }
 
       res.status(500).json({

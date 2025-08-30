@@ -30,14 +30,14 @@ export default async function handler(
 
   try {
     await dbConnect();
-    
-    // Use controller to authenticate user
-    const user = await UserController.authenticateUser(email, password);
 
-    const token = signToken({ 
-      id: user.id, 
+    // Use controller service method to authenticate user
+    const user = await UserController.authenticateUserService(email, password);
+
+    const token = signToken({
+      id: user.id,
       role: user.role,
-      email: user.email 
+      email: user.email,
     });
     setTokenCookie(res, token);
 
@@ -45,21 +45,24 @@ export default async function handler(
   } catch (err: unknown) {
     const error = err as Error;
     console.error("Login error:", err);
-    
+
     // Set appropriate status code based on error type
     let statusCode = 401; // Default unauthorized
-    
+
     // Customize status code based on error message
     if (error.message === "User not found") {
       statusCode = 404; // Not found
-    } else if (error.message === "Account is inactive" || error.message === "Account is blocked") {
+    } else if (
+      error.message === "Account is inactive" ||
+      error.message === "Account is blocked"
+    ) {
       statusCode = 403; // Forbidden
     }
-    
-    return res.status(statusCode).json({ 
+
+    return res.status(statusCode).json({
       error: error.message || "Internal error",
       // Add a user-friendly message
-      message: getLoginErrorMessage(error.message)
+      message: getLoginErrorMessage(error.message),
     });
   }
 }

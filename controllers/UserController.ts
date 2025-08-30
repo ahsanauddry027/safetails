@@ -2,13 +2,246 @@
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Request, Response } from "express";
+import { NextApiRequest, NextApiResponse } from "next";
 
 export class UserController {
-  static async getAllUsers(req: Request, res: Response) {
+  // Service method for authentication (used by API routes)
+  static async authenticateUserService(email: string, password: string) {
+    if (!email || !password) {
+      throw new Error("Email and password are required");
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.isBlocked) {
+      throw new Error("Account is blocked");
+    }
+
+    if (!user.isActive) {
+      throw new Error("Account is inactive");
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error("Invalid password");
+    }
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    return userResponse;
+  }
+
+  // Service method for getting user by ID (used by API routes)
+  static async getUserByIdService(userId: string) {
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.isBlocked) {
+      throw new Error("Account is blocked");
+    }
+
+    if (!user.isActive) {
+      throw new Error("Account is inactive");
+    }
+
+    return user;
+  }
+
+  // Service method for checking if email exists
+  static async checkEmailExistsService(email: string, excludeUserId?: string) {
+    const filter: Record<string, unknown> = { email };
+    if (excludeUserId) {
+      filter._id = { $ne: excludeUserId };
+    }
+    const user = await User.findOne(filter);
+    return !!user;
+  }
+
+  // Service method for creating a user
+  static async createUserService(userData: {
+    name: string;
+    email: string;
+    password: string;
+    role?: string;
+    phone?: string;
+    address?: string;
+    bio?: string;
+  }) {
+    const { name, email, password, role, phone, address, bio } = userData;
+
+    if (!name || !email || !password) {
+      throw new Error("Name, email, and password are required");
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      throw new Error("User with this email already exists");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role: role || "user",
+      phone,
+      address,
+      bio,
+      isActive: true,
+    });
+
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    return userResponse;
+  }
+
+  // Service method for updating a user
+  static async updateUserService(
+    userId: string,
+    updateData: Record<string, unknown>
+  ) {
+    if (updateData.password) {
+      updateData.password = await bcrypt.hash(
+        updateData.password as string,
+        12
+      );
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!updatedUser) {
+      throw new Error("User not found");
+    }
+
+    return updatedUser;
+  }
+
+  // Service method for toggling user block status
+  static async toggleUserBlockService(
+    userId: string,
+    isBlocked: boolean,
+    blockReason?: string,
+    blockedBy?: string
+  ) {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    user.isBlocked = isBlocked;
+    if (isBlocked) {
+      user.blockedBy = blockedBy;
+      user.blockedAt = new Date();
+      user.blockReason = blockReason;
+    } else {
+      user.blockedBy = undefined;
+      user.blockedAt = undefined;
+      user.blockReason = undefined;
+    }
+
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    return userResponse;
+  }
+
+  // Service method for deleting a user
+  static async deleteUserService(userId: string) {
+    const user = await User.findByIdAndDelete(userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return { message: "User deleted successfully" };
+  }
+
+  // Service method for getting all users (admin)
+  static async getAllUsersService(
+    page = 1,
+    limit = 10,
+    filters: Record<string, unknown> = {}
+  ) {
+    const pageNum = parseInt(page.toString());
+    const limitNum = parseInt(limit.toString());
+    const skip = (pageNum - 1) * limitNum;
+
+    const filter: Record<string, unknown> = {};
+
+    if (filters.role) {
+      filter.role = filters.role;
+    }
+
+    if (filters.status === "active") {
+      filter.isActive = true;
+    } else if (filters.status === "inactive") {
+      filter.isActive = false;
+    }
+
+    if (filters.status === "blocked") {
+      filter.isBlocked = true;
+    }
+
+    if (filters.search) {
+      filter.$or = [
+        { name: { $regex: filters.search, $options: "i" } },
+        { email: { $regex: filters.search, $options: "i" } },
+      ];
+    }
+
+    const total = await User.countDocuments(filter);
+    const users = await User.find(filter)
+      .select("-password")
+      .skip(skip)
+      .limit(limitNum)
+      .sort({ createdAt: -1 });
+
+    return {
+      success: true,
+      data: users,
+      pagination: {
+        total,
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
+      },
+    };
+  }
+
+  // Service method for getting user statistics
+  static async getUserStatisticsService() {
+    const totalUsers = await User.countDocuments();
+    const activeUsers = await User.countDocuments({ isActive: true });
+    const blockedUsers = await User.countDocuments({ isBlocked: true });
+    const newUsersThisMonth = await User.countDocuments({
+      createdAt: {
+        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        total: totalUsers,
+        active: activeUsers,
+        blocked: blockedUsers,
+        newThisMonth: newUsersThisMonth,
+      },
+    };
+  }
+  static async getAllUsers(req: NextApiRequest, res: NextApiResponse) {
     try {
       const token =
-        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+        req.cookies?.token || req.headers.authorization?.replace("Bearer ", "");
 
       if (!token) {
         return res.status(401).json({
@@ -17,7 +250,10 @@ export class UserController {
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+        role: string;
+      };
 
       if (!decoded) {
         return res.status(401).json({
@@ -38,7 +274,7 @@ export class UserController {
       const limitNum = parseInt(limit as string);
       const skip = (pageNum - 1) * limitNum;
 
-      const filter: any = {};
+      const filter: Record<string, unknown> = {};
 
       if (role) {
         filter.role = role;
@@ -86,9 +322,9 @@ export class UserController {
     }
   }
 
-  static async getUserById(req: Request, res: Response) {
+  static async getUserById(req: NextApiRequest, res: NextApiResponse) {
     try {
-      const { id } = req.params;
+      const { id } = req.query;
 
       const user = await User.findById(id).select("-password");
       if (!user) {
@@ -110,7 +346,7 @@ export class UserController {
     }
   }
 
-  static async createUser(req: Request, res: Response) {
+  static async createUser(req: NextApiRequest, res: NextApiResponse) {
     try {
       const { name, email, password, role, phone, address, bio } = req.body;
 
@@ -159,10 +395,10 @@ export class UserController {
     }
   }
 
-  static async updateUser(req: Request, res: Response) {
+  static async updateUser(req: NextApiRequest, res: NextApiResponse) {
     try {
       const token =
-        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+        req.cookies?.token || req.headers.authorization?.replace("Bearer ", "");
 
       if (!token) {
         return res.status(401).json({
@@ -171,7 +407,10 @@ export class UserController {
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+        role: string;
+      };
 
       if (!decoded) {
         return res.status(401).json({
@@ -180,7 +419,7 @@ export class UserController {
         });
       }
 
-      const { id } = req.params;
+      const { id } = req.query;
       const updateData = req.body;
 
       if (decoded.id !== id && decoded.role !== "admin") {
@@ -219,10 +458,10 @@ export class UserController {
     }
   }
 
-  static async toggleUserBlock(req: Request, res: Response) {
+  static async toggleUserBlock(req: NextApiRequest, res: NextApiResponse) {
     try {
       const token =
-        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+        req.cookies?.token || req.headers.authorization?.replace("Bearer ", "");
 
       if (!token) {
         return res.status(401).json({
@@ -231,7 +470,10 @@ export class UserController {
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+        role: string;
+      };
 
       if (!decoded) {
         return res.status(401).json({
@@ -247,7 +489,7 @@ export class UserController {
         });
       }
 
-      const { id } = req.params;
+      const { id } = req.query;
       const { isBlocked, blockReason } = req.body;
 
       const user = await User.findById(id);
@@ -287,10 +529,10 @@ export class UserController {
     }
   }
 
-  static async deleteUser(req: Request, res: Response) {
+  static async deleteUser(req: NextApiRequest, res: NextApiResponse) {
     try {
       const token =
-        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+        req.cookies?.token || req.headers.authorization?.replace("Bearer ", "");
 
       if (!token) {
         return res.status(401).json({
@@ -299,7 +541,10 @@ export class UserController {
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+        role: string;
+      };
 
       if (!decoded) {
         return res.status(401).json({
@@ -315,7 +560,7 @@ export class UserController {
         });
       }
 
-      const { id } = req.params;
+      const { id } = req.query;
 
       if (decoded.id === id) {
         return res.status(400).json({
@@ -344,7 +589,7 @@ export class UserController {
     }
   }
 
-  static async authenticateUser(req: Request, res: Response) {
+  static async authenticateUser(req: NextApiRequest, res: NextApiResponse) {
     try {
       const { email, password } = req.body;
 
@@ -385,13 +630,6 @@ export class UserController {
         { expiresIn: "7d" }
       );
 
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
-
       const userResponse = user.toObject();
       delete userResponse.password;
 
@@ -409,10 +647,10 @@ export class UserController {
     }
   }
 
-  static async getUserByToken(req: Request, res: Response) {
+  static async getUserByToken(req: NextApiRequest, res: NextApiResponse) {
     try {
       const token =
-        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+        req.cookies?.token || req.headers.authorization?.replace("Bearer ", "");
 
       if (!token) {
         return res.status(401).json({
@@ -421,7 +659,9 @@ export class UserController {
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+      };
 
       if (!decoded) {
         return res.status(401).json({
@@ -458,7 +698,7 @@ export class UserController {
     }
   }
 
-  static async checkEmailExists(req: Request, res: Response) {
+  static async checkEmailExists(req: NextApiRequest, res: NextApiResponse) {
     try {
       const { email } = req.query;
 
@@ -484,10 +724,10 @@ export class UserController {
     }
   }
 
-  static async getUserStatistics(req: Request, res: Response) {
+  static async getUserStatistics(req: NextApiRequest, res: NextApiResponse) {
     try {
       const token =
-        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+        req.cookies?.token || req.headers.authorization?.replace("Bearer ", "");
 
       if (!token) {
         return res.status(401).json({
@@ -496,7 +736,10 @@ export class UserController {
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+        role: string;
+      };
 
       if (!decoded) {
         return res.status(401).json({
@@ -538,18 +781,20 @@ export class UserController {
     }
   }
 
-  static async verifyEmail(req: Request, res: Response) {
+  static async verifyEmail(req: NextApiRequest, res: NextApiResponse) {
     try {
-      const { token } = req.params;
+      const { token } = req.query;
 
-      if (!token) {
+      if (!token || typeof token !== "string") {
         return res.status(400).json({
           success: false,
           message: "Verification token is required",
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+      };
 
       if (!decoded) {
         return res.status(400).json({
@@ -589,7 +834,10 @@ export class UserController {
     }
   }
 
-  static async resendVerificationEmail(req: Request, res: Response) {
+  static async resendVerificationEmail(
+    req: NextApiRequest,
+    res: NextApiResponse
+  ) {
     try {
       const { email } = req.body;
 
@@ -636,7 +884,10 @@ export class UserController {
     }
   }
 
-  static async generatePasswordResetToken(req: Request, res: Response) {
+  static async generatePasswordResetToken(
+    req: NextApiRequest,
+    res: NextApiResponse
+  ) {
     try {
       const { email } = req.body;
 
@@ -680,19 +931,21 @@ export class UserController {
     }
   }
 
-  static async resetPassword(req: Request, res: Response) {
+  static async resetPassword(req: NextApiRequest, res: NextApiResponse) {
     try {
-      const { token } = req.params;
+      const { token } = req.query;
       const { newPassword } = req.body;
 
-      if (!token || !newPassword) {
+      if (!token || typeof token !== "string" || !newPassword) {
         return res.status(400).json({
           success: false,
           message: "Token and new password are required",
         });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        id: string;
+      };
 
       if (!decoded) {
         return res.status(400).json({

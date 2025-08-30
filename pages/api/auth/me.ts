@@ -15,27 +15,29 @@ export default async function handler(
 
     const decoded = verifyToken(token) as { id: string };
     await dbConnect();
-    
-    // Use controller to get user by token
-    const user = await UserController.getUserByToken(decoded.id);
+
+    // Use controller service method to get user by ID
+    const user = await UserController.getUserByIdService(decoded.id);
 
     res.status(200).json({ user });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+    const errorMessage =
+      error instanceof Error ? error.message : "Authentication failed";
     console.error("Auth error:", error);
-    
+
     // Set appropriate status code based on error type
     let statusCode = 401; // Default unauthorized
-    
+
     if (errorMessage === "Account is blocked") {
       statusCode = 403; // Forbidden
     }
-    
-    res.status(statusCode).json({ 
+
+    res.status(statusCode).json({
       error: errorMessage,
-      message: errorMessage === "Account is blocked" 
-        ? "Your account has been blocked by an administrator. You cannot access the site until the block is removed." 
-        : "Authentication failed"
+      message:
+        errorMessage === "Account is blocked"
+          ? "Your account has been blocked by an administrator. You cannot access the site until the block is removed."
+          : "Authentication failed",
     });
   }
 }
