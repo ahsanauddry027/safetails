@@ -2,7 +2,8 @@ import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import Report from "@/models/Report";
 import PetPost from "@/models/PetPost";
-import { verifyToken } from "@/utils/auth";
+import { verifyToken, verifyTokenAndCheckBlocked } from "@/utils/auth";
+import User from "@/models/User";
 
 export default async function handler(
   req: NextApiRequest,
@@ -37,13 +38,15 @@ export default async function handler(
 // Get reports (admin only)
 async function getReports(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies?.token;
     if (!token) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const decoded = await verifyToken(token);
-    if (!decoded || decoded.role !== "admin") {
+    const decoded = await verifyTokenAndCheckBlocked(token);
+    const user = await User.findById(decoded.id);
+
+    if (!user || user.role !== "admin") {
       return res.status(403).json({ message: "Admin access required" });
     }
 
@@ -52,7 +55,7 @@ async function getReports(req: NextApiRequest, res: NextApiResponse) {
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
 
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
     if (status) filter.status = status;
 
     const total = await Report.countDocuments(filter);
@@ -88,14 +91,36 @@ async function getReports(req: NextApiRequest, res: NextApiResponse) {
 // Create a new report
 async function createReport(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies?.token;
     if (!token) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const decoded = await verifyToken(token);
-    if (!decoded) {
+    // Use basic token verification first, then check user exists
+    const decoded = (await verifyToken(token)) as { id: string };
+    if (!decoded || !decoded.id) {
       return res.status(401).json({ message: "Invalid token" });
+    }
+
+    // Check if user exists and is active
+    console.log("Looking for user with ID:", decoded.id);
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      console.error("User not found in database with ID:", decoded.id);
+      return res.status(401).json({ message: "User not found" });
+    }
+    console.log("User found:", {
+      id: user._id,
+      email: user.email,
+      isActive: user.isActive,
+    });
+
+    if (!user.isActive) {
+      return res.status(403).json({ message: "Account is inactive" });
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({ message: "Account is blocked" });
     }
 
     const { postId, reason, description } = req.body;
@@ -148,13 +173,15 @@ async function createReport(req: NextApiRequest, res: NextApiResponse) {
 // Update report status (admin only)
 async function updateReport(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies?.token;
     if (!token) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const decoded = await verifyToken(token);
-    if (!decoded || decoded.role !== "admin") {
+    const decoded = await verifyTokenAndCheckBlocked(token);
+    const user = await User.findById(decoded.id);
+
+    if (!user || user.role !== "admin") {
       return res.status(403).json({ message: "Admin access required" });
     }
 
@@ -170,14 +197,14 @@ async function updateReport(req: NextApiRequest, res: NextApiResponse) {
       return res.status(404).json({ message: "Report not found" });
     }
 
-    const updateData: any = { status };
+    const updateData: Record<string, unknown> = { status };
     if (adminNotes) updateData.adminNotes = adminNotes;
     if (
       status === "reviewed" ||
       status === "resolved" ||
       status === "dismissed"
     ) {
-      updateData.reviewedBy = decoded.id;
+      updateData.reviewedBy = user._id;
       updateData.reviewedAt = new Date();
     }
 

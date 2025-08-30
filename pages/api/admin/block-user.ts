@@ -21,13 +21,20 @@ export default async function handler(
 
     const decoded = await verifyTokenAndCheckBlocked(token);
     await dbConnect();
-    
+
     const adminUser = await User.findById(decoded.id);
     if (!adminUser || adminUser.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
     }
 
     const { userId, isBlocked, blockReason } = req.body;
+
+    console.log("Block user API called with:", {
+      userId,
+      isBlocked,
+      blockReason,
+      adminId: decoded.id,
+    });
 
     if (!userId) {
       return res.status(400).json({ error: "User ID is required" });
@@ -40,25 +47,31 @@ export default async function handler(
     }
 
     if (targetUser.role === "admin") {
-      return res.status(403).json({ error: "Cannot block other administrators" });
+      return res
+        .status(403)
+        .json({ error: "Cannot block other administrators" });
     }
 
-    // Use controller to block/unblock user
-    const updatedUser = await UserController.toggleUserBlock(
-      userId, 
-      isBlocked, 
-      decoded.id, 
-      blockReason
+    // Use controller service method to block/unblock user
+    const updatedUser = await UserController.toggleUserBlockService(
+      userId,
+      isBlocked,
+      blockReason,
+      decoded.id
     );
 
     res.status(200).json({
       success: true,
-      message: `User ${isBlocked ? 'blocked' : 'unblocked'} successfully`,
-      user: updatedUser
+      message: `User ${isBlocked ? "blocked" : "unblocked"} successfully`,
+      user: updatedUser,
     });
-
   } catch (error) {
     console.error("Block user error:", error);
-    res.status(500).json({ error: "Failed to update user status" });
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to update user status";
+    res.status(500).json({
+      error: errorMessage,
+      details: error instanceof Error ? error.stack : "Unknown error",
+    });
   }
-} 
+}

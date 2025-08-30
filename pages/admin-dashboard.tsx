@@ -668,11 +668,19 @@ export default function AdminDashboard() {
 
   const handleBlockUser = async (userId: string, isBlocked: boolean) => {
     try {
-      await axios.put("/api/admin/block-user", {
+      console.log("Attempting to block/unblock user:", {
         userId,
         isBlocked,
         blockReason: isBlocked ? blockReason : "",
       });
+
+      const response = await axios.put("/api/admin/block-user", {
+        userId,
+        isBlocked,
+        blockReason: isBlocked ? blockReason : "",
+      });
+
+      console.log("Block user response:", response.data);
 
       setShowBlockModal(false);
       setBlockReason("");
@@ -682,7 +690,32 @@ export default function AdminDashboard() {
         "success"
       );
     } catch (error: unknown) {
-      showNotification(getErrorMessage(error), "error");
+      console.error("Block user error:", error);
+
+      // Enhanced error handling
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as {
+          response?: {
+            status?: number;
+            data?: { error?: string; message?: string; details?: string };
+          };
+        };
+
+        console.error("Block user API error details:", {
+          status: axiosError.response?.status,
+          error: axiosError.response?.data?.error,
+          message: axiosError.response?.data?.message,
+          details: axiosError.response?.data?.details,
+        });
+
+        const errorMessage =
+          axiosError.response?.data?.error ||
+          axiosError.response?.data?.message ||
+          getErrorMessage(error);
+        showNotification(errorMessage, "error");
+      } else {
+        showNotification(getErrorMessage(error), "error");
+      }
     }
   };
 

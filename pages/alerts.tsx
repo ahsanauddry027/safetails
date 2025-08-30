@@ -219,8 +219,8 @@ export default function AlertsPage() {
                 emergencies
               </p>
               <p className="mt-1 text-sm text-gray-500">
-                Radius filter: Only shows alerts with coverage area ≤ your
-                search radius
+                Radius filter: Shows alerts within your search radius AND with
+                alert radius ≤ your search radius
               </p>
             </div>
             <div className="mt-4 md:mt-0 flex space-x-3">
@@ -346,7 +346,7 @@ export default function AlertsPage() {
               >
                 Search Radius: {radius}km
                 <span className="ml-2 text-xs text-gray-500 font-normal">
-                  (Only shows alerts with radius ≤ {radius}km)
+                  (Shows alerts within {radius}km AND with radius ≤ {radius}km)
                 </span>
               </label>
               <input
@@ -446,8 +446,7 @@ export default function AlertsPage() {
                   Found {total} alert{total !== 1 ? "s" : ""}
                 </h2>
                 <div className="text-sm text-gray-600">
-                  Showing alerts with radius ≤ {radius}km within your search
-                  area
+                  Showing alerts within {radius}km AND with radius ≤ {radius}km
                 </div>
               </div>
 

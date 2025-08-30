@@ -11,7 +11,7 @@ export default async function handler(
   if (req.method !== "POST") return res.status(405).end("Method Not Allowed");
 
   const { email } = req.body;
-  
+
   if (!email) {
     return res.status(400).json({ error: "Email is required" });
   }
@@ -20,18 +20,21 @@ export default async function handler(
     await dbConnect();
 
     // Generate new OTP and update user
-    const result = await UserController.resendVerificationEmail(email);
+    const result = await UserController.resendVerificationEmailService(email);
 
     // Send new OTP email
     await EmailService.sendOTPEmail(email, result.otp, result.user.name);
 
     res.status(200).json({
       success: true,
-      message: "Verification email sent successfully. Please check your inbox."
+      message: "Verification email sent successfully. Please check your inbox.",
     });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Failed to resend verification';
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to resend verification";
     console.error("Resend verification error:", error);
-    res.status(400).json({ error: error.message || "Failed to resend verification email" });
+    res
+      .status(400)
+      .json({ error: error.message || "Failed to resend verification email" });
   }
 }

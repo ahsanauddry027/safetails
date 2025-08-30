@@ -33,6 +33,7 @@ interface AlertFormData {
     state: string;
     zipCode: string;
     radius: number;
+    type: string; // Added for GeoJSON Point type
   };
   petDetails: {
     petType: string;
@@ -62,6 +63,7 @@ const CreateAlertModal: React.FC<CreateAlertModalProps> = ({
       state: "",
       zipCode: "",
       radius: 10,
+      type: "Point", // Added for GeoJSON Point type
     },
     petDetails: {
       petType: "",
@@ -174,19 +176,53 @@ const CreateAlertModal: React.FC<CreateAlertModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Set expiration date if provided
+      // Validate required fields
+      if (
+        !formData.title.trim() ||
+        !formData.description.trim() ||
+        !formData.location.address.trim() ||
+        !formData.location.city.trim() ||
+        !formData.location.state.trim()
+      ) {
+        showNotification("Please fill in all required fields", "error");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Ensure location has the required 'type' field
       const alertData = {
         ...formData,
+        location: {
+          ...formData.location,
+          type: "Point", // Add the required type field
+          coordinates: formData.location.coordinates,
+          address: formData.location.address.trim(),
+          city: formData.location.city.trim(),
+          state: formData.location.state.trim(),
+          zipCode: formData.location.zipCode.trim() || undefined,
+          radius: formData.location.radius || 10,
+        },
         expiresAt: formData.expiresAt
           ? new Date(formData.expiresAt).toISOString()
           : undefined,
       };
 
-      await axios.post("/api/alerts", alertData);
-      showNotification("Alert created successfully!", "success");
-      onSuccess();
-      onClose();
+      console.log("Submitting alert data:", alertData); // Debug log
+
+      const response = await axios.post("/api/alerts", alertData);
+
+      if (response.data.success) {
+        showNotification("Alert created successfully!", "success");
+        onSuccess();
+        onClose();
+      } else {
+        showNotification(
+          response.data.message || "Failed to create alert",
+          "error"
+        );
+      }
     } catch (err: unknown) {
+      console.error("Error creating alert:", err); // Debug log
       let errorMessage = "Failed to create alert";
       if (err && typeof err === "object" && "response" in err) {
         const response = (err as { response?: { data?: { message?: string } } })

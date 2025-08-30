@@ -21,7 +21,7 @@ export default async function handler(
 
     const decoded = await verifyTokenAndCheckBlocked(token);
     await dbConnect();
-    
+
     const adminUser = await User.findById(decoded.id);
     if (!adminUser || adminUser.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
@@ -40,16 +40,17 @@ export default async function handler(
     }
 
     if (targetUser.role === "admin") {
-      return res.status(403).json({ error: "Cannot delete other administrators" });
+      return res
+        .status(403)
+        .json({ error: "Cannot delete other administrators" });
     }
 
-    // Use controller to delete user
-    const result = await UserController.deleteUser(userId);
+    // Use controller service method to delete user
+    const result = await UserController.deleteUserService(userId);
 
     res.status(200).json(result);
-
   } catch (error) {
     console.error("Delete user error:", error);
     res.status(500).json({ error: "Failed to delete user" });
   }
-} 
+}

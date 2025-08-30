@@ -20,17 +20,16 @@ export default async function handler(
 
     const decoded = await verifyTokenAndCheckBlocked(token);
     await dbConnect();
-    
+
     // Get complete statistics including current admin
-    const stats = await UserController.getUserStatistics();
-    
+    const stats = await UserController.getUserStatisticsService();
+
     res.status(200).json({
       success: true,
-      stats
+      stats,
     });
-
   } catch (error) {
     console.error("Admin stats fetch error:", error);
     res.status(500).json({ error: "Failed to fetch statistics" });
   }
-} 
+}

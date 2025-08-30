@@ -21,7 +21,7 @@ export default async function handler(
 
     const decoded = await verifyTokenAndCheckBlocked(token);
     await dbConnect();
-    
+
     const adminUser = await User.findById(decoded.id);
     if (!adminUser || adminUser.role !== "admin") {
       return res.status(403).json({ error: "Admin access required" });
@@ -41,30 +41,39 @@ export default async function handler(
 
     // Prevent admin from changing other admin roles
     if (targetUser.role === "admin" && role !== "admin") {
-      return res.status(403).json({ error: "Cannot change administrator roles" });
+      return res
+        .status(403)
+        .json({ error: "Cannot change administrator roles" });
     }
 
     // Check if email is already taken by another user
     if (email && email !== targetUser.email) {
-      const emailExists = await UserController.checkEmailExists(email, userId);
+      const emailExists = await UserController.checkEmailExistsService(
+        email,
+        userId
+      );
       if (emailExists) {
         return res.status(400).json({ error: "Email already exists" });
       }
     }
 
-    // Use controller to update user
-    const updatedUser = await UserController.updateUser(userId, {
-      name, email, role, phone, address, bio
+    // Use controller service method to update user
+    const updatedUser = await UserController.updateUserService(userId, {
+      name,
+      email,
+      role,
+      phone,
+      address,
+      bio,
     });
 
     res.status(200).json({
       success: true,
       message: "User updated successfully",
-      user: updatedUser
+      user: updatedUser,
     });
-
   } catch (error) {
     console.error("Update user error:", error);
     res.status(500).json({ error: "Failed to update user" });
   }
-} 
+}

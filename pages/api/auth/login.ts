@@ -35,7 +35,7 @@ export default async function handler(
     const user = await UserController.authenticateUserService(email, password);
 
     const token = signToken({
-      id: user.id,
+      id: user._id,
       role: user.role,
       email: user.email,
     });

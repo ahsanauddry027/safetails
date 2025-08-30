@@ -52,6 +52,41 @@ export class UserController {
     return user;
   }
 
+  // Service method for verifying email with OTP
+  static async verifyEmailWithOTPService(email: string, otp: string) {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.isEmailVerified) {
+      throw new Error("Email is already verified");
+    }
+
+    // Check if OTP matches and hasn't expired
+    if (user.emailVerificationToken !== otp) {
+      throw new Error("Invalid OTP");
+    }
+
+    if (
+      user.emailVerificationExpires &&
+      user.emailVerificationExpires < new Date()
+    ) {
+      throw new Error("OTP has expired");
+    }
+
+    // Mark email as verified
+    user.isEmailVerified = true;
+    user.emailVerifiedAt = new Date();
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    return { user: userResponse, message: "Email verified successfully" };
+  }
+
   // Service method for checking if email exists
   static async checkEmailExistsService(email: string, excludeUserId?: string) {
     const filter: Record<string, unknown> = { email };
@@ -71,8 +106,20 @@ export class UserController {
     phone?: string;
     address?: string;
     bio?: string;
+    emailVerificationToken?: string;
+    emailVerificationExpires?: Date;
   }) {
-    const { name, email, password, role, phone, address, bio } = userData;
+    const {
+      name,
+      email,
+      password,
+      role,
+      phone,
+      address,
+      bio,
+      emailVerificationToken,
+      emailVerificationExpires,
+    } = userData;
 
     if (!name || !email || !password) {
       throw new Error("Name, email, and password are required");
@@ -93,6 +140,9 @@ export class UserController {
       address,
       bio,
       isActive: true,
+      emailVerificationToken,
+      emailVerificationExpires,
+      isEmailVerified: !emailVerificationToken, // If no OTP, mark as verified
     });
 
     await user.save();
@@ -133,10 +183,23 @@ export class UserController {
     blockReason?: string,
     blockedBy?: string
   ) {
+    console.log("toggleUserBlockService called with:", {
+      userId,
+      isBlocked,
+      blockReason,
+      blockedBy,
+    });
+
     const user = await User.findById(userId);
     if (!user) {
+      console.error("User not found with ID:", userId);
       throw new Error("User not found");
     }
+
+    console.log("User found, updating block status:", {
+      currentBlocked: user.isBlocked,
+      newBlocked: isBlocked,
+    });
 
     user.isBlocked = isBlocked;
     if (isBlocked) {
@@ -150,6 +213,7 @@ export class UserController {
     }
 
     await user.save();
+    console.log("User block status updated successfully");
 
     const userResponse = user.toObject();
     delete userResponse.password;
@@ -220,8 +284,10 @@ export class UserController {
   // Service method for getting user statistics
   static async getUserStatisticsService() {
     const totalUsers = await User.countDocuments();
-    const activeUsers = await User.countDocuments({ isActive: true });
-    const blockedUsers = await User.countDocuments({ isBlocked: true });
+    const totalActive = await User.countDocuments({ isActive: true });
+    const totalBlocked = await User.countDocuments({ isBlocked: true });
+    const totalVets = await User.countDocuments({ role: "vet" });
+    const totalAdmins = await User.countDocuments({ role: "admin" });
     const newUsersThisMonth = await User.countDocuments({
       createdAt: {
         $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -230,12 +296,98 @@ export class UserController {
 
     return {
       success: true,
-      data: {
-        total: totalUsers,
-        active: activeUsers,
-        blocked: blockedUsers,
-        newThisMonth: newUsersThisMonth,
-      },
+      totalUsers,
+      totalVets,
+      totalAdmins,
+      totalBlocked,
+      totalActive,
+      newThisMonth: newUsersThisMonth,
+    };
+  }
+
+  // Service method for generating password reset token
+  static async generatePasswordResetTokenService(email: string) {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const resetToken = jwt.sign(
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET!,
+      { expiresIn: "1h" }
+    );
+
+    user.passwordResetToken = resetToken;
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    return {
+      user: userResponse,
+      resetToken,
+      message: "Password reset token generated successfully",
+    };
+  }
+
+  // Service method for resending verification email
+  static async resendVerificationEmailService(email: string) {
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.isEmailVerified) {
+      throw new Error("Email is already verified");
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+
+    // Update user with new OTP
+    user.emailVerificationToken = otp;
+    user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    return {
+      success: true,
+      message: "Verification email sent successfully",
+      otp,
+      user: userResponse,
+    };
+  }
+
+  // Service method for resetting password with token
+  static async resetPasswordService(token: string, newPassword: string) {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      id: string;
+    };
+    if (!decoded) {
+      throw new Error("Invalid reset token");
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.passwordResetExpires && user.passwordResetExpires < new Date()) {
+      throw new Error("Reset token has expired");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    user.password = hashedPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    return {
+      success: true,
+      message: "Password reset successfully",
     };
   }
   static async getAllUsers(req: NextApiRequest, res: NextApiResponse) {

@@ -11,7 +11,7 @@ export default async function handler(
   if (req.method !== "POST") return res.status(405).end("Method Not Allowed");
 
   const { email, otp } = req.body;
-  
+
   if (!email || !otp) {
     return res.status(400).json({ error: "Email and OTP are required" });
   }
@@ -20,7 +20,7 @@ export default async function handler(
     await dbConnect();
 
     // Verify email with OTP
-    const result = await UserController.verifyEmail(email, otp);
+    const result = await UserController.verifyEmailWithOTPService(email, otp);
 
     // Send welcome email after successful verification
     try {
@@ -32,8 +32,11 @@ export default async function handler(
 
     res.status(200).json(result);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Email verification failed';
+    const errorMessage =
+      error instanceof Error ? error.message : "Email verification failed";
     console.error("Email verification error:", error);
-    res.status(400).json({ error: error.message || "Email verification failed" });
+    res
+      .status(400)
+      .json({ error: error.message || "Email verification failed" });
   }
 }
