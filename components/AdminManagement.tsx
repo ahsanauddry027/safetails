@@ -51,7 +51,6 @@ const AdminManagement = ({
       const adminUsers = response.data.users.admins || [];
       setAdmins(adminUsers);
     } catch (error) {
-      console.error("Failed to fetch admins:", error);
       onError("Failed to fetch admin users");
     } finally {
       setLoading(false);
@@ -76,7 +75,6 @@ const AdminManagement = ({
       setSelectedAdmin(null);
       fetchAdmins();
     } catch (error) {
-      console.error("Failed to update admin:", error);
       onError("Failed to update admin user");
     }
   };
@@ -95,7 +93,6 @@ const AdminManagement = ({
       setSelectedAdmin(null);
       fetchAdmins();
     } catch (error) {
-      console.error("Failed to delete admin:", error);
       onError("Failed to delete admin user");
     }
   };
@@ -114,7 +111,6 @@ const AdminManagement = ({
       onSuccess(`Admin ${isActive ? "deactivated" : "activated"} successfully`);
       fetchAdmins();
     } catch (error) {
-      console.error("Failed to toggle admin status:", error);
       onError("Failed to update admin status");
     }
   };

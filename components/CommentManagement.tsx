@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 interface Comment {
   _id: string;
@@ -13,7 +13,7 @@ interface Comment {
     email: string;
     role: string;
   };
-  userType: 'user' | 'vet';
+  userType: "user" | "vet";
 }
 
 interface CommentManagementProps {
@@ -21,11 +21,14 @@ interface CommentManagementProps {
   onClose: () => void;
 }
 
-export default function CommentManagement({ isOpen, onClose }: CommentManagementProps) {
+export default function CommentManagement({
+  isOpen,
+  onClose,
+}: CommentManagementProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     if (isOpen) {
@@ -36,68 +39,61 @@ export default function CommentManagement({ isOpen, onClose }: CommentManagement
   const fetchComments = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/comments', {
-        withCredentials: true
+      const response = await axios.get("/api/admin/comments", {
+        withCredentials: true,
       });
       setComments(response.data.data);
     } catch (error) {
-      console.error('Error fetching comments:', error);
-      setError('Failed to fetch comments');
+      setError("Failed to fetch comments");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (commentId: string, isApproved: boolean) => {
+  const handleApproveComment = async (commentId: string) => {
     try {
-      await axios.put(`/api/admin/comments/${commentId}`, 
-        { isApproved },
+      setLoading(true);
+      await axios.put(
+        `/api/admin/comments/${commentId}`,
+        {
+          isApproved: true,
+        },
         { withCredentials: true }
       );
-      
-      // Update the comment in the local state
-      setComments(prev => prev.map(comment => 
-        comment._id === commentId 
-          ? { ...comment, isApproved }
-          : comment
-      ));
-      
-      // Clear any previous errors and show success message
-      setError('');
-      setSuccessMessage(`Comment ${isApproved ? 'approved' : 'rejected'} successfully!`);
-      setTimeout(() => setSuccessMessage(''), 3000);
+      fetchComments();
+      setSuccessMessage("Comment approved successfully");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error updating comment:', error);
-      setError('Failed to update comment status');
+      setError("Failed to approve comment");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = async (commentId: string) => {
-    if (!confirm('Are you sure you want to delete this comment? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("Are you sure you want to delete this comment?")) return;
 
     try {
+      setLoading(true);
       await axios.delete(`/api/admin/comments/${commentId}`, {
-        withCredentials: true
+        withCredentials: true,
       });
-      
-      // Remove the comment from the local state
-      setComments(prev => prev.filter(comment => comment._id !== commentId));
-      
-      // Clear any previous errors and show success message
-      setError('');
-      setSuccessMessage('Comment deleted successfully!');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      fetchComments();
+      setSuccessMessage("Comment deleted successfully");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error deleting comment:', error);
-      setError('Failed to delete comment');
+      setError("Failed to delete comment");
+    } finally {
+      setLoading(false);
     }
   };
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <span key={i} className={i < rating ? 'text-yellow-400' : 'text-gray-300'}>
+      <span
+        key={i}
+        className={i < rating ? "text-yellow-400" : "text-gray-300"}
+      >
         ★
       </span>
     ));
@@ -111,13 +107,25 @@ export default function CommentManagement({ isOpen, onClose }: CommentManagement
         {/* Header */}
         <div className="bg-gradient-to-r from-black to-gray-800 text-white p-6 rounded-t-3xl">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold font-display">Comment Management</h2>
+            <h2 className="text-2xl font-bold font-display">
+              Comment Management
+            </h2>
             <button
               onClick={onClose}
               className="text-white hover:text-gray-300 transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -130,7 +138,7 @@ export default function CommentManagement({ isOpen, onClose }: CommentManagement
               {error}
             </div>
           )}
-          
+
           {successMessage && (
             <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
               {successMessage}
@@ -153,8 +161,8 @@ export default function CommentManagement({ isOpen, onClose }: CommentManagement
                   key={comment._id}
                   className={`border-2 rounded-2xl p-6 transition-all duration-300 ${
                     comment.isApproved
-                      ? 'border-green-200 bg-green-50'
-                      : 'border-yellow-200 bg-yellow-50'
+                      ? "border-green-200 bg-green-50"
+                      : "border-yellow-200 bg-yellow-50"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-4">
@@ -164,20 +172,24 @@ export default function CommentManagement({ isOpen, onClose }: CommentManagement
                           <span className="font-semibold text-gray-900">
                             {comment.user.name}
                           </span>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            comment.user.role === 'admin' 
-                              ? 'bg-red-100 text-red-800'
-                              : comment.user.role === 'vet'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              comment.user.role === "admin"
+                                ? "bg-red-100 text-red-800"
+                                : comment.user.role === "vet"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
                             {comment.user.role}
                           </span>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            comment.userType === 'vet' 
-                              ? 'bg-purple-100 text-purple-800'
-                              : 'bg-green-100 text-green-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              comment.userType === "vet"
+                                ? "bg-purple-100 text-purple-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
                             {comment.userType}
                           </span>
                         </div>
@@ -194,19 +206,21 @@ export default function CommentManagement({ isOpen, onClose }: CommentManagement
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        comment.isApproved
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {comment.isApproved ? 'Approved' : 'Pending Approval'}
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          comment.isApproved
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {comment.isApproved ? "Approved" : "Pending Approval"}
                       </span>
                     </div>
 
                     <div className="flex items-center space-x-2">
                       {!comment.isApproved && (
                         <button
-                          onClick={() => handleApprove(comment._id, true)}
+                          onClick={() => handleApproveComment(comment._id)}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
                         >
                           Approve
@@ -214,14 +228,14 @@ export default function CommentManagement({ isOpen, onClose }: CommentManagement
                       )}
                       {comment.isApproved && (
                         <button
-                          onClick={() => handleApprove(comment._id, false)}
+                          onClick={() => handleApproveComment(comment._id)}
                           className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium"
                         >
                           Reject
                         </button>
                       )}
                       <button
-                        onClick={() => handleDelete(comment._id)}
+                        onClick={() => handleDeleteComment(comment._id)}
                         className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
                       >
                         Delete

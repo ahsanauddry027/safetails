@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 
 interface AdoptionForm {
   petType: string;
@@ -12,7 +12,7 @@ interface AdoptionForm {
   petCategory?: string; // Corresponds to size
   description: string;
   images: string[];
-  adoptionType: 'permanent' | 'trial' | 'senior' | 'special-needs';
+  adoptionType: "permanent" | "trial" | "senior" | "special-needs";
   adoptionFee?: number;
   isSpayedNeutered: boolean;
   isVaccinated: boolean;
@@ -33,21 +33,21 @@ const CreateAdoptionPage: React.FC = () => {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [formData, setFormData] = useState<AdoptionForm>({
-    petType: '',
-    petBreed: '',
-    petAge: '',
-    petGender: 'unknown',
-    petColor: '',
-    petCategory: '',
-    description: '',
+    petType: "",
+    petBreed: "",
+    petAge: "",
+    petGender: "unknown",
+    petColor: "",
+    petCategory: "",
+    description: "",
     images: [], // Images are not required for now
-    adoptionType: 'permanent',
+    adoptionType: "permanent",
     adoptionFee: undefined,
     isSpayedNeutered: false,
     isVaccinated: false,
     isMicrochipped: false,
-    specialNeeds: '',
-    medicalHistory: '',
+    specialNeeds: "",
+    medicalHistory: "",
     temperament: [],
     goodWith: {
       children: false,
@@ -58,121 +58,137 @@ const CreateAdoptionPage: React.FC = () => {
     requirements: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const temperamentOptions = [
-    'Friendly',
-    'Playful',
-    'Calm',
-    'Energetic',
-    'Shy',
-    'Confident',
-    'Independent',
-    'Affectionate',
-    'Intelligent',
-    'Curious',
-    'Gentle',
-    'Protective'
+    "Friendly",
+    "Playful",
+    "Calm",
+    "Energetic",
+    "Shy",
+    "Confident",
+    "Independent",
+    "Affectionate",
+    "Intelligent",
+    "Curious",
+    "Gentle",
+    "Protective",
   ];
 
   const requirementOptions = [
-    'Home visit required',
-    'Vet reference required',
-    'Personal reference required',
-    'Fenced yard required',
-    'No other pets',
-    'Experienced owner required',
-    'Children over 12 only',
-    'No children',
-    'Indoor only',
-    'Outdoor access required'
+    "Home visit required",
+    "Vet reference required",
+    "Personal reference required",
+    "Fenced yard required",
+    "No other pets",
+    "Experienced owner required",
+    "Children over 12 only",
+    "No children",
+    "Indoor only",
+    "Outdoor access required",
   ];
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [user, loading, router]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value, type, checked } = e.target as HTMLInputElement;
-    
-    if (type === 'checkbox') {
-      if (name.startsWith('goodWith.')) {
-        const field = name.split('.')[1] as keyof typeof formData.goodWith;
-        setFormData(prev => ({
+
+    if (type === "checkbox") {
+      if (name.startsWith("goodWith.")) {
+        const field = name.split(".")[1] as keyof typeof formData.goodWith;
+        setFormData((prev) => ({
           ...prev,
           goodWith: {
             ...prev.goodWith,
-            [field]: checked
-          }
+            [field]: checked,
+          },
         }));
-      } else if (name === 'isSpayedNeutered' || name === 'isVaccinated' || name === 'isMicrochipped') {
-        setFormData(prev => ({
+      } else if (
+        name === "isSpayedNeutered" ||
+        name === "isVaccinated" ||
+        name === "isMicrochipped"
+      ) {
+        setFormData((prev) => ({
           ...prev,
-          [name]: checked
+          [name]: checked,
         }));
-      } else if (name === 'requirements') {
-        setFormData(prev => ({
+      } else if (name === "requirements") {
+        setFormData((prev) => ({
           ...prev,
           requirements: checked
             ? [...prev.requirements, value]
-            : prev.requirements.filter(req => req !== value)
+            : prev.requirements.filter((req) => req !== value),
         }));
       }
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     }
   };
 
   const handleTemperamentChange = (temperament: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       temperament: prev.temperament.includes(temperament)
-        ? prev.temperament.filter(t => t !== temperament)
-        : [...prev.temperament, temperament]
+        ? prev.temperament.filter((t) => t !== temperament)
+        : [...prev.temperament, temperament],
     }));
   };
 
   const handleRequirementChange = (requirement: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       requirements: prev.requirements.includes(requirement)
-        ? prev.requirements.filter(r => r !== requirement)
-        : [...prev.requirements, requirement]
+        ? prev.requirements.filter((r) => r !== requirement)
+        : [...prev.requirements, requirement],
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      console.log('Submitting adoption request with data:', formData);
-      console.log('Required fields check:', {
+      console.log("Submitting adoption request with data:", formData);
+      console.log("Required fields check:", {
         petType: !!formData.petType,
         description: !!formData.description,
         adoptionType: !!formData.adoptionType,
       });
 
-      const response = await axios.post('/api/adoption', formData, {
+      const response = await axios.post("/api/adoption", formData, {
         headers: {
-          'Content-Type': 'application/json'
-        }
+          "Content-Type": "application/json",
+        },
       });
 
-      setSuccess('Adoption listing created successfully!');
+      setSuccess("Adoption listing created successfully!");
       setTimeout(() => {
-        router.push('/adoption');
+        router.push("/adoption");
       }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create adoption listing');
+    } catch (err: unknown) {
+      let errorMessage = "Failed to create adoption listing";
+      if (err && typeof err === "object" && "response" in err) {
+        const response = (err as { response?: { data?: { message?: string } } })
+          .response;
+        if (response?.data?.message) {
+          errorMessage = response.data.message;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -195,8 +211,12 @@ const CreateAdoptionPage: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Adoption Listing</h1>
-            <p className="text-gray-600">Help a pet find their forever home by creating an adoption listing</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Create Adoption Listing
+            </h1>
+            <p className="text-gray-600">
+              Help a pet find their forever home by creating an adoption listing
+            </p>
           </div>
 
           {error && (
@@ -214,7 +234,9 @@ const CreateAdoptionPage: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Pet Information */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Pet Information</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Pet Information
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -330,7 +352,9 @@ const CreateAdoptionPage: React.FC = () => {
 
             {/* Adoption Details */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Adoption Details</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Adoption Details
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -357,7 +381,7 @@ const CreateAdoptionPage: React.FC = () => {
                   <input
                     type="number"
                     name="adoptionFee"
-                    value={formData.adoptionFee || ''}
+                    value={formData.adoptionFee || ""}
                     onChange={handleInputChange}
                     min="0"
                     step="0.01"
@@ -370,7 +394,9 @@ const CreateAdoptionPage: React.FC = () => {
 
             {/* Medical Status */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Medical Status</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Medical Status
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <label className="flex items-center">
                   <input
@@ -380,7 +406,9 @@ const CreateAdoptionPage: React.FC = () => {
                     onChange={handleInputChange}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <span className="ml-2 text-sm text-gray-700">Spayed/Neutered</span>
+                  <span className="ml-2 text-sm text-gray-700">
+                    Spayed/Neutered
+                  </span>
                 </label>
 
                 <label className="flex items-center">
@@ -402,7 +430,9 @@ const CreateAdoptionPage: React.FC = () => {
                     onChange={handleInputChange}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <span className="ml-2 text-sm text-gray-700">Microchipped</span>
+                  <span className="ml-2 text-sm text-gray-700">
+                    Microchipped
+                  </span>
                 </label>
               </div>
 
@@ -439,7 +469,9 @@ const CreateAdoptionPage: React.FC = () => {
 
             {/* Temperament */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Temperament & Compatibility</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Temperament & Compatibility
+              </h2>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Temperament (Select all that apply)
@@ -453,7 +485,9 @@ const CreateAdoptionPage: React.FC = () => {
                         onChange={() => handleTemperamentChange(temperament)}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <span className="ml-2 text-sm text-gray-700">{temperament}</span>
+                      <span className="ml-2 text-sm text-gray-700">
+                        {temperament}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -505,7 +539,9 @@ const CreateAdoptionPage: React.FC = () => {
                       onChange={handleInputChange}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="ml-2 text-sm text-gray-700">Other Pets</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      Other Pets
+                    </span>
                   </label>
                 </div>
               </div>
@@ -513,7 +549,9 @@ const CreateAdoptionPage: React.FC = () => {
 
             {/* Requirements */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Adoption Requirements</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Adoption Requirements
+              </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {requirementOptions.map((requirement) => (
                   <label key={requirement} className="flex items-center">
@@ -523,7 +561,9 @@ const CreateAdoptionPage: React.FC = () => {
                       onChange={() => handleRequirementChange(requirement)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{requirement}</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      {requirement}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -543,7 +583,7 @@ const CreateAdoptionPage: React.FC = () => {
                 disabled={isSubmitting}
                 className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Creating...' : 'Create Adoption Listing'}
+                {isSubmitting ? "Creating..." : "Create Adoption Listing"}
               </button>
             </div>
           </form>

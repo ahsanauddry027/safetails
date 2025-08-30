@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
-import { CommentFormProps, UserComment } from '@/types/comment';
+import { CommentFormProps, UserComment } from "@/types/comment";
 
-const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }) => {
-  const [content, setContent] = useState('');
+const CommentForm: React.FC<CommentFormProps> = ({
+  onCommentSubmitted,
+  onClose,
+}) => {
+  const [content, setContent] = useState("");
   const [rating, setRating] = useState(5);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [existingComment, setExistingComment] = useState<UserComment | null>(null);
+  const [error, setError] = useState("");
+  const [existingComment, setExistingComment] = useState<UserComment | null>(
+    null
+  );
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -18,7 +23,7 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }
 
   const checkExistingComment = async () => {
     try {
-      const response = await axios.get('/api/comments/user');
+      const response = await axios.get("/api/comments/user");
       if (response.data.success && response.data.data) {
         setExistingComment(response.data.data);
         setContent(response.data.data.content);
@@ -26,21 +31,21 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }
         setIsEditing(true);
       }
     } catch (error) {
-      console.error('Error checking existing comment:', error);
+      setError("Failed to check existing comment");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const method = isEditing ? 'PUT' : 'POST';
+      const method = isEditing ? "PUT" : "POST";
       const response = await axios({
         method,
-        url: '/api/comments/user',
-        data: { content, rating }
+        url: "/api/comments/user",
+        data: { content, rating },
       });
 
       if (response.data.success) {
@@ -48,8 +53,11 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }
         onClose();
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to submit review';
-      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to submit review";
+      const axiosError = error as {
+        response?: { data?: { message?: string } };
+      };
       setError(axiosError.response?.data?.message || errorMessage);
     } finally {
       setLoading(false);
@@ -57,16 +65,19 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete your review?')) return;
+    if (!confirm("Are you sure you want to delete your review?")) return;
 
     setLoading(true);
     try {
-      await axios.delete('/api/comments/user');
+      await axios.delete("/api/comments/user");
       onCommentSubmitted();
       onClose();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete review';
-      const axiosError = error as { response?: { data?: { message?: string } } };
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete review";
+      const axiosError = error as {
+        response?: { data?: { message?: string } };
+      };
       setError(axiosError.response?.data?.message || errorMessage);
     } finally {
       setLoading(false);
@@ -78,14 +89,24 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }
       <div className="bg-white rounded-3xl p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-2xl font-bold text-black font-heading">
-            {isEditing ? 'Edit Your Review' : 'Share Your Story'}
+            {isEditing ? "Edit Your Review" : "Share Your Story"}
           </h3>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-black transition-colors duration-200"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -103,7 +124,7 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }
                   type="button"
                   onClick={() => setRating(star)}
                   className={`text-2xl transition-colors duration-200 ${
-                    star <= rating ? 'text-yellow-400' : 'text-gray-300'
+                    star <= rating ? "text-yellow-400" : "text-gray-300"
                   }`}
                 >
                   ★
@@ -111,11 +132,11 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }
               ))}
             </div>
             <p className="text-sm text-gray-600 mt-2 font-body">
-              {rating === 1 && 'Poor'}
-              {rating === 2 && 'Fair'}
-              {rating === 3 && 'Good'}
-              {rating === 4 && 'Very Good'}
-              {rating === 5 && 'Excellent'}
+              {rating === 1 && "Poor"}
+              {rating === 2 && "Fair"}
+              {rating === 3 && "Good"}
+              {rating === 4 && "Very Good"}
+              {rating === 5 && "Excellent"}
             </p>
           </div>
 
@@ -161,9 +182,13 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentSubmitted, onClose }
               disabled={loading}
               className="flex-1 bg-black text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-primary"
             >
-              {loading ? 'Submitting...' : isEditing ? 'Update Review' : 'Submit Review'}
+              {loading
+                ? "Submitting..."
+                : isEditing
+                  ? "Update Review"
+                  : "Submit Review"}
             </button>
-            
+
             {isEditing && (
               <button
                 type="button"

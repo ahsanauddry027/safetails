@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useAuth } from '../context/AuthContext';
-import dynamic from 'next/dynamic';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { useAuth } from "../context/AuthContext";
+import dynamic from "next/dynamic";
+import axios from "axios";
 
 // Dynamically import LeafletMap to avoid SSR issues
-const LeafletMap = dynamic(() => import('../components/LeafletMap'), {
+const LeafletMap = dynamic(() => import("../components/LeafletMap"), {
   ssr: false,
-  loading: () => <div className="h-64 bg-gray-200 animate-pulse rounded-lg"></div>
+  loading: () => (
+    <div className="h-64 bg-gray-200 animate-pulse rounded-lg"></div>
+  ),
 });
 
 interface FosterRequestForm {
@@ -15,8 +17,8 @@ interface FosterRequestForm {
   petType: string;
   breed: string;
   age: string;
-  gender: 'male' | 'female' | 'unknown';
-  size: 'small' | 'medium' | 'large' | 'giant';
+  gender: "male" | "female" | "unknown";
+  size: "small" | "medium" | "large" | "giant";
   color: string;
   description: string;
   location: {
@@ -26,7 +28,7 @@ interface FosterRequestForm {
     state: string;
     zipCode: string;
   };
-  fosterType: 'temporary' | 'long-term' | 'emergency';
+  fosterType: "temporary" | "long-term" | "emergency";
   duration: string;
   startDate: string;
   endDate: string;
@@ -41,53 +43,53 @@ const CreateFoster: React.FC = () => {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [formData, setFormData] = useState<FosterRequestForm>({
-    petName: '',
-    petType: '',
-    breed: '',
-    age: '',
-    gender: 'unknown',
-    size: 'medium',
-    color: '',
-    description: '',
+    petName: "",
+    petType: "",
+    breed: "",
+    age: "",
+    gender: "unknown",
+    size: "medium",
+    color: "",
+    description: "",
     location: {
       coordinates: [0, 0],
-      address: '',
-      city: '',
-      state: '',
-      zipCode: ''
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
     },
-    fosterType: 'temporary',
-    duration: '',
-    startDate: '',
-    endDate: '',
+    fosterType: "temporary",
+    duration: "",
+    startDate: "",
+    endDate: "",
     requirements: [],
-    specialNeeds: '',
-    medicalHistory: '',
+    specialNeeds: "",
+    medicalHistory: "",
     isUrgent: false,
-    images: [] // Will remain empty array
+    images: [], // Will remain empty array
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showMap, setShowMap] = useState(false);
 
   const requirementOptions = [
-    'Fenced yard',
-    'No other pets',
-    'No children',
-    'Experience with pets',
-    'Home visit required',
-    'Vet reference required',
-    'Personal reference required',
-    'Financial commitment',
-    'Transportation available',
-    'Flexible schedule'
+    "Fenced yard",
+    "No other pets",
+    "No children",
+    "Experience with pets",
+    "Home visit required",
+    "Vet reference required",
+    "Personal reference required",
+    "Financial commitment",
+    "Transportation available",
+    "Flexible schedule",
   ];
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [user, loading, router]);
 
@@ -98,126 +100,144 @@ const CreateFoster: React.FC = () => {
         (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          
+
           // Validate coordinates
-          if (lat && lng && !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-            setFormData(prev => ({
+          if (
+            lat &&
+            lng &&
+            !isNaN(lat) &&
+            !isNaN(lng) &&
+            lat !== 0 &&
+            lng !== 0
+          ) {
+            setFormData((prev) => ({
               ...prev,
               location: {
                 ...prev.location,
                 // MongoDB 2dsphere expects [longitude, latitude]
-                coordinates: [lng, lat]
-              }
+                coordinates: [lng, lat],
+              },
             }));
           }
         },
         (error) => {
-          console.log('Error getting location:', error);
+          console.log("Error getting location:", error);
           // Set default coordinates if geolocation fails
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
             location: {
               ...prev.location,
               // MongoDB 2dsphere expects [longitude, latitude]
-              coordinates: [-74.0060, 40.7128] // Default to NYC coordinates
-            }
+              coordinates: [-74.006, 40.7128], // Default to NYC coordinates
+            },
           }));
         }
       );
     } else {
       // Fallback for browsers without geolocation
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         location: {
           ...prev.location,
           // MongoDB 2dsphere expects [longitude, latitude]
-          coordinates: [-74.0060, 40.7128] // Default to NYC coordinates
-        }
+          coordinates: [-74.006, 40.7128], // Default to NYC coordinates
+        },
       }));
     }
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value, type } = e.target;
-    
-    if (type === 'checkbox') {
+
+    if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: checked
+        [name]: checked,
       }));
-    } else if (name.startsWith('location.')) {
-      const field = name.split('.')[1];
-      setFormData(prev => ({
+    } else if (name.startsWith("location.")) {
+      const field = name.split(".")[1];
+      setFormData((prev) => ({
         ...prev,
         location: {
           ...prev.location,
-          [field]: value
-        }
+          [field]: value,
+        },
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     }
   };
 
   const handleRequirementChange = (requirement: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       requirements: prev.requirements.includes(requirement)
-        ? prev.requirements.filter(r => r !== requirement)
-        : [...prev.requirements, requirement]
+        ? prev.requirements.filter((r) => r !== requirement)
+        : [...prev.requirements, requirement],
     }));
   };
 
-
-
   const handleMapClick = (lat: number, lng: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       location: {
         ...prev.location,
         // MongoDB 2dsphere expects [longitude, latitude]
-        coordinates: [lng, lat]
-      }
+        coordinates: [lng, lat],
+      },
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      console.log('Submitting foster request with data:', formData);
-      console.log('Location coordinates:', formData.location?.coordinates || 'No location provided');
-      console.log('Required fields check:', {
+      console.log("Submitting foster request with data:", formData);
+      console.log(
+        "Location coordinates:",
+        formData.location?.coordinates || "No location provided"
+      );
+      console.log("Required fields check:", {
         petName: !!formData.petName,
         petType: !!formData.petType,
         description: !!formData.description,
         fosterType: !!formData.fosterType,
         startDate: !!formData.startDate,
-        duration: !!formData.duration
-      });
-      
-      const response = await axios.post('/api/foster', formData, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        duration: !!formData.duration,
       });
 
-      setSuccess('Foster request created successfully!');
+      const response = await axios.post("/api/foster", formData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      setSuccess("Foster request created successfully!");
       setTimeout(() => {
-        router.push('/foster');
+        router.push("/foster");
       }, 2000);
-    } catch (err: any) {
-      console.error('Error creating foster request:', err);
-      console.error('Error response:', err.response);
-      console.error('Error data:', err.response?.data);
-      setError(err.response?.data?.message || 'Failed to create foster request');
+    } catch (err: unknown) {
+      console.error("Error creating foster request:", err);
+      let errorMessage = "Failed to create foster request";
+      if (err && typeof err === "object" && "response" in err) {
+        const response = (err as { response?: { data?: { message?: string } } })
+          .response;
+        if (response?.data?.message) {
+          errorMessage = response.data.message;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -240,8 +260,12 @@ const CreateFoster: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Foster Request</h1>
-            <p className="text-gray-600">Help a pet find a temporary home by creating a foster request</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Create Foster Request
+            </h1>
+            <p className="text-gray-600">
+              Help a pet find a temporary home by creating a foster request
+            </p>
           </div>
 
           {error && (
@@ -259,7 +283,9 @@ const CreateFoster: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Pet Information */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Pet Information</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Pet Information
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -389,7 +415,9 @@ const CreateFoster: React.FC = () => {
 
             {/* Foster Details */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Foster Details</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Foster Details
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -460,14 +488,18 @@ const CreateFoster: React.FC = () => {
                     onChange={handleInputChange}
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <span className="ml-2 text-sm text-gray-700">Mark as urgent</span>
+                  <span className="ml-2 text-sm text-gray-700">
+                    Mark as urgent
+                  </span>
                 </label>
               </div>
             </div>
 
             {/* Requirements */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Foster Requirements</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Foster Requirements
+              </h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {requirementOptions.map((requirement) => (
                   <label key={requirement} className="flex items-center">
@@ -477,7 +509,9 @@ const CreateFoster: React.FC = () => {
                       onChange={() => handleRequirementChange(requirement)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{requirement}</span>
+                    <span className="ml-2 text-sm text-gray-700">
+                      {requirement}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -485,7 +519,9 @@ const CreateFoster: React.FC = () => {
 
             {/* Medical Information */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Medical Information</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Medical Information
+              </h2>
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -519,7 +555,9 @@ const CreateFoster: React.FC = () => {
 
             {/* Location */}
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Location</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Location
+              </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -580,29 +618,33 @@ const CreateFoster: React.FC = () => {
                   onClick={() => setShowMap(!showMap)}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {showMap ? 'Hide Map' : 'Show Map'} (Click to set location)
+                  {showMap ? "Hide Map" : "Show Map"} (Click to set location)
                 </button>
               </div>
 
-                             {showMap && formData.location?.coordinates && (
-                 <div className="mt-4">
-                   <LeafletMap
-                     center={[formData.location.coordinates[1], formData.location.coordinates[0]]}
-                     zoom={13}
-                     onMapClick={handleMapClick}
-                     markers={[
-                       {
-                         position: [formData.location.coordinates[1], formData.location.coordinates[0]],
-                         popup: 'Selected Location'
-                       }
-                     ]}
-                     height="400px"
-                   />
-                 </div>
-               )}
+              {showMap && formData.location?.coordinates && (
+                <div className="mt-4">
+                  <LeafletMap
+                    center={[
+                      formData.location.coordinates[1],
+                      formData.location.coordinates[0],
+                    ]}
+                    zoom={13}
+                    onMapClick={handleMapClick}
+                    markers={[
+                      {
+                        position: [
+                          formData.location.coordinates[1],
+                          formData.location.coordinates[0],
+                        ],
+                        popup: "Selected Location",
+                      },
+                    ]}
+                    height="400px"
+                  />
+                </div>
+              )}
             </div>
-
-
 
             {/* Submit Button */}
             <div className="flex justify-end space-x-4">
@@ -618,7 +660,7 @@ const CreateFoster: React.FC = () => {
                 disabled={isSubmitting}
                 className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Creating...' : 'Create Foster Request'}
+                {isSubmitting ? "Creating..." : "Create Foster Request"}
               </button>
             </div>
           </form>

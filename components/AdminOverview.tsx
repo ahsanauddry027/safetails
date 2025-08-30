@@ -1,6 +1,7 @@
 // components/AdminOverview.tsx
 import { useState, useEffect } from "react";
 import axios from "axios";
+import Notification from "@/components/Notification";
 
 interface AdminStats {
   totalAdmins: number;
@@ -16,6 +17,23 @@ interface AdminOverviewProps {
 const AdminOverview = ({ onRefresh }: AdminOverviewProps) => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error";
+    isVisible: boolean;
+  }>({
+    message: "",
+    type: "success",
+    isVisible: false,
+  });
+
+  const showNotification = (message: string, type: "success" | "error") => {
+    setNotification({ message, type, isVisible: true });
+  };
+
+  const hideNotification = () => {
+    setNotification((prev) => ({ ...prev, isVisible: false }));
+  };
 
   useEffect(() => {
     fetchAdminStats();
@@ -48,8 +66,9 @@ const AdminOverview = ({ onRefresh }: AdminOverviewProps) => {
       };
 
       setStats(adminStats);
+      showNotification("Admin statistics updated successfully", "success");
     } catch (error) {
-      console.error("Failed to fetch admin stats:", error);
+      showNotification("Failed to fetch admin statistics", "error");
     } finally {
       setLoading(false);
     }
@@ -95,6 +114,7 @@ const AdminOverview = ({ onRefresh }: AdminOverviewProps) => {
           onClick={() => {
             fetchAdminStats();
             onRefresh();
+            showNotification("Refreshing admin statistics...", "success");
           }}
           className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 font-medium"
         >
@@ -210,7 +230,7 @@ const AdminOverview = ({ onRefresh }: AdminOverviewProps) => {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Quick Actions
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -302,6 +322,14 @@ const AdminOverview = ({ onRefresh }: AdminOverviewProps) => {
           </div>
         </div>
       </div>
+
+      {/* Notification Component */}
+      <Notification
+        message={notification.message}
+        type={notification.type}
+        isVisible={notification.isVisible}
+        onClose={hideNotification}
+      />
     </div>
   );
 };

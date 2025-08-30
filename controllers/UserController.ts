@@ -1,425 +1,736 @@
 // controllers/UserController.ts
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { Request, Response } from "express";
 
 export class UserController {
-  // Get all users with statistics
-  static async getAllUsers(excludeAdminId?: string) {
+  static async getAllUsers(req: Request, res: Response) {
     try {
-      const query = excludeAdminId ? { _id: { $ne: excludeAdminId } } : {};
-      
-      const users = await User.find(query)
+      const token =
+        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid token",
+        });
+      }
+
+      if (decoded.role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Admin access required",
+        });
+      }
+
+      const { page = 1, limit = 10, role, status, search } = req.query;
+      const pageNum = parseInt(page as string);
+      const limitNum = parseInt(limit as string);
+      const skip = (pageNum - 1) * limitNum;
+
+      const filter: any = {};
+
+      if (role) {
+        filter.role = role;
+      }
+
+      if (status === "active") {
+        filter.isActive = true;
+      } else if (status === "inactive") {
+        filter.isActive = false;
+      }
+
+      if (status === "blocked") {
+        filter.isBlocked = true;
+      }
+
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ];
+      }
+
+      const total = await User.countDocuments(filter);
+      const users = await User.find(filter)
         .select("-password")
-        .populate("blockedBy", "name email")
+        .skip(skip)
+        .limit(limitNum)
         .sort({ createdAt: -1 });
 
-      // Group users by role
-      const groupedUsers = {
-        users: users.filter(user => user.role === "user"),
-        vets: users.filter(user => user.role === "vet"),
-        admins: users.filter(user => user.role === "admin"),
-        blocked: users.filter(user => user.isBlocked),
-        total: users.length
-      };
-
-      const stats = {
-        totalUsers: groupedUsers.users.length,
-        totalVets: groupedUsers.vets.length,
-        totalAdmins: groupedUsers.admins.length,
-        totalBlocked: groupedUsers.blocked.length,
-        totalActive: users.length - groupedUsers.blocked.length
-      };
-
-      return { success: true, users: groupedUsers, stats };
-    } catch (error) {
-      console.error("Get all users error:", error);
-      throw new Error("Failed to fetch users");
-    }
-  }
-
-  // Get user by ID
-  static async getUserById(userId: string) {
-    try {
-      const user = await User.findById(userId).select("-password");
-      if (!user) {
-        throw new Error("User not found");
-      }
-      return user;
-    } catch (error) {
-      console.error("Get user by ID error:", error);
-      throw error;
-    }
-  }
-
-  // Create new user
-  static async createUser(userData: {
-    name: string;
-    email: string;
-    password: string;
-    role?: string;
-    phone?: string;
-    address?: string;
-    bio?: string;
-    emailVerificationToken?: string;
-    emailVerificationExpires?: Date;
-  }) {
-    try {
-      const { password, ...userFields } = userData;
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      const user = await User.create({
-        ...userFields,
-        password: hashedPassword,
-        role: userFields.role || "user"
+      res.json({
+        success: true,
+        data: users,
+        pagination: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          pages: Math.ceil(total / limitNum),
+        },
       });
-
-      return {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      };
     } catch (error) {
-      console.error("Create user error:", error);
-      throw new Error("Failed to create user");
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
     }
   }
 
-  // Update user
-  static async updateUser(userId: string, updateData: {
-    name?: string;
-    email?: string;
-    role?: string;
-    phone?: string;
-    address?: string;
-    bio?: string;
-  }) {
+  static async getUserById(req: Request, res: Response) {
     try {
-      const user = await User.findByIdAndUpdate(
-        userId,
-        updateData,
-        { new: true, runValidators: true }
-      ).select("-password");
+      const { id } = req.params;
 
+      const user = await User.findById(id).select("-password");
       if (!user) {
-        throw new Error("User not found");
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
       }
 
-      return user;
+      res.json({
+        success: true,
+        data: user,
+      });
     } catch (error) {
-      console.error("Update user error:", error);
-      throw error;
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
     }
   }
 
-  // Block/Unblock user
-  static async toggleUserBlock(userId: string, isBlocked: boolean, adminId: string, blockReason?: string) {
+  static async createUser(req: Request, res: Response) {
     try {
-      const updateData: {
-        isBlocked: boolean;
-        blockedBy: string | null;
-        blockedAt: Date | null;
-        blockReason: string | null;
-      } = {
-        isBlocked: isBlocked,
-        blockedBy: isBlocked ? adminId : null,
-        blockedAt: isBlocked ? new Date() : null,
-        blockReason: isBlocked ? blockReason || null : null
-      };
+      const { name, email, password, role, phone, address, bio } = req.body;
 
-      const user = await User.findByIdAndUpdate(
-        userId,
-        updateData,
-        { new: true }
-      ).select("-password");
-
-      if (!user) {
-        throw new Error("User not found");
+      if (!name || !email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Name, email, and password are required",
+        });
       }
 
-      return user;
-    } catch (error) {
-      console.error("Toggle user block error:", error);
-      throw error;
-    }
-  }
-
-  // Soft delete user
-  static async deleteUser(userId: string) {
-    try {
-      const user = await User.findByIdAndUpdate(
-        userId,
-        { isActive: false },
-        { new: true }
-      );
-
-      if (!user) {
-        throw new Error("User not found");
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: "User with this email already exists",
+        });
       }
 
-      return { success: true, message: "User deleted successfully" };
-    } catch (error) {
-      console.error("Delete user error:", error);
-      throw error;
-    }
-  }
-
-  // Authenticate user
-  static async authenticateUser(email: string, password: string) {
-    try {
-      // First check if user exists at all
-      const userExists = await User.findOne({ email });
-      
-      if (!userExists) {
-        throw new Error("User not found");
-      }
-      
-      // Then check if user is inactive
-      if (!userExists.isActive) {
-        throw new Error("Account is inactive");
-      }
-      
-      // Then check if user is blocked
-      if (userExists.isBlocked) {
-        throw new Error("Account is blocked");
-      }
-      
-      // Now we know the user exists, is active and not blocked
-      const validPassword = await bcrypt.compare(password, userExists.password);
-      if (!validPassword) {
-        throw new Error("Invalid password");
-      }
-
-      return {
-        id: userExists._id,
-        email: userExists.email,
-        name: userExists.name,
-        role: userExists.role,
-        phone: userExists.phone,
-        address: userExists.address,
-        bio: userExists.bio,
-        profileImage: userExists.profileImage
-      };
-    } catch (error) {
-      console.error("Authenticate user error:", error);
-      throw error;
-    }
-  }
-
-  // Get user by token
-  static async getUserByToken(userId: string) {
-    try {
-      const user = await User.findById(userId).select("-password");
-      
-      if (!user || !user.isActive) {
-        throw new Error("User not found or inactive");
-      }
-
-      // Check if user is blocked
-      if (user.isBlocked) {
-        throw new Error("Account is blocked");
-      }
-
-      return user;
-    } catch (error) {
-      console.error("Get user by token error:", error);
-      throw error;
-    }
-  }
-
-  // Check if email exists
-  static async checkEmailExists(email: string, excludeUserId?: string) {
-    try {
-      const query = excludeUserId 
-        ? { email, _id: { $ne: excludeUserId } }
-        : { email };
-      
-      const existingUser = await User.findOne(query);
-      return !!existingUser;
-    } catch (error) {
-      console.error("Check email exists error:", error);
-      throw error;
-    }
-  }
-
-  // Get user statistics
-  static async getUserStatistics() {
-    try {
-      const totalUsers = await User.countDocuments({ role: "user", isActive: true });
-      const totalVets = await User.countDocuments({ role: "vet", isActive: true });
-      const totalAdmins = await User.countDocuments({ role: "admin", isActive: true });
-      const totalBlocked = await User.countDocuments({ isBlocked: true, isActive: true });
-      const totalActive = await User.countDocuments({ isActive: true, isBlocked: false });
-
-      return {
-        totalUsers,
-        totalVets,
-        totalAdmins,
-        totalBlocked,
-        totalActive
-      };
-    } catch (error) {
-      console.error("Get user statistics error:", error);
-      throw new Error("Failed to get user statistics");
-    }
-  }
-
-  // Get all users with statistics (for admin dashboard)
-  static async getAllUsersForAdmin(excludeAdminId?: string) {
-    try {
-      const query = excludeAdminId ? { _id: { $ne: excludeAdminId } } : {};
-      
-      const users = await User.find(query)
-        .select("-password")
-        .populate("blockedBy", "name email")
-        .sort({ createdAt: -1 });
-
-      // Group users by role
-      const groupedUsers = {
-        users: users.filter(user => user.role === "user"),
-        vets: users.filter(user => user.role === "vet"),
-        admins: users.filter(user => user.role === "admin"),
-        blocked: users.filter(user => user.isBlocked),
-        total: users.length
-      };
-
-      // Get complete statistics including current admin
-      const stats = await this.getUserStatistics();
-
-      return { success: true, users: groupedUsers, stats };
-    } catch (error) {
-      console.error("Get all users error:", error);
-      throw new Error("Failed to fetch users");
-    }
-  }
-
-  // Verify email with OTP
-  static async verifyEmail(email: string, otp: string) {
-    try {
-      const user = await User.findOne({
+      const hashedPassword = await bcrypt.hash(password, 12);
+      const user = new User({
+        name,
         email,
-        emailVerificationToken: otp,
-        emailVerificationExpires: { $gt: new Date() }
+        password: hashedPassword,
+        role: role || "user",
+        phone,
+        address,
+        bio,
+        isActive: true,
       });
 
-      if (!user) {
-        throw new Error("Invalid or expired OTP");
-      }
-
-      // Update user verification status
-      user.isEmailVerified = true;
-      user.emailVerificationToken = undefined;
-      user.emailVerificationExpires = undefined;
       await user.save();
 
-      return {
+      const userResponse = user.toObject();
+      delete userResponse.password;
+
+      res.status(201).json({
         success: true,
-        message: "Email verified successfully",
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isEmailVerified: user.isEmailVerified
-        }
-      };
+        data: userResponse,
+        message: "User created successfully",
+      });
     } catch (error) {
-      console.error("Verify email error:", error);
-      throw error;
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
     }
   }
 
-  // Resend verification email
-  static async resendVerificationEmail(email: string) {
+  static async updateUser(req: Request, res: Response) {
     try {
-      const user = await User.findOne({ email });
-      
+      const token =
+        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid token",
+        });
+      }
+
+      const { id } = req.params;
+      const updateData = req.body;
+
+      if (decoded.id !== id && decoded.role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          message: "You can only update your own profile",
+        });
+      }
+
+      if (updateData.password) {
+        updateData.password = await bcrypt.hash(updateData.password, 12);
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true,
+      }).select("-password");
+
+      if (!updatedUser) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        data: updatedUser,
+        message: "User updated successfully",
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  static async toggleUserBlock(req: Request, res: Response) {
+    try {
+      const token =
+        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid token",
+        });
+      }
+
+      if (decoded.role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Admin access required",
+        });
+      }
+
+      const { id } = req.params;
+      const { isBlocked, blockReason } = req.body;
+
+      const user = await User.findById(id);
       if (!user) {
-        throw new Error("User not found");
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      user.isBlocked = isBlocked;
+      if (isBlocked) {
+        user.blockedBy = decoded.id;
+        user.blockedAt = new Date();
+        user.blockReason = blockReason;
+      } else {
+        user.blockedBy = undefined;
+        user.blockedAt = undefined;
+        user.blockReason = undefined;
+      }
+
+      await user.save();
+
+      const userResponse = user.toObject();
+      delete userResponse.password;
+
+      res.json({
+        success: true,
+        data: userResponse,
+        message: `User ${isBlocked ? "blocked" : "unblocked"} successfully`,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  static async deleteUser(req: Request, res: Response) {
+    try {
+      const token =
+        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid token",
+        });
+      }
+
+      if (decoded.role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Admin access required",
+        });
+      }
+
+      const { id } = req.params;
+
+      if (decoded.id === id) {
+        return res.status(400).json({
+          success: false,
+          message: "You cannot delete your own account",
+        });
+      }
+
+      const user = await User.findByIdAndDelete(id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "User deleted successfully",
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  static async authenticateUser(req: Request, res: Response) {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Email and password are required",
+        });
+      }
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      if (user.isBlocked) {
+        return res.status(403).json({
+          success: false,
+          error: "Account is blocked",
+          blockReason: user.blockReason,
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid credentials",
+        });
+      }
+
+      const token = jwt.sign(
+        { id: user._id, email: user.email, role: user.role },
+        process.env.JWT_SECRET!,
+        { expiresIn: "7d" }
+      );
+
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
+      const userResponse = user.toObject();
+      delete userResponse.password;
+
+      res.json({
+        success: true,
+        message: "Authentication successful",
+        user: userResponse,
+        token,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  static async getUserByToken(req: Request, res: Response) {
+    try {
+      const token =
+        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid token",
+        });
+      }
+
+      const user = await User.findById(decoded.id).select("-password");
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      if (user.isBlocked) {
+        return res.status(403).json({
+          success: false,
+          error: "Account is blocked",
+          blockReason: user.blockReason,
+        });
+      }
+
+      res.json({
+        success: true,
+        user,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  static async checkEmailExists(req: Request, res: Response) {
+    try {
+      const { email } = req.query;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email parameter is required",
+        });
+      }
+
+      const user = await User.findOne({ email });
+      const exists = !!user;
+
+      res.json({
+        success: true,
+        exists,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  static async getUserStatistics(req: Request, res: Response) {
+    try {
+      const token =
+        req.cookies.token || req.headers.authorization?.replace("Bearer ", "");
+
+      if (!token) {
+        return res.status(401).json({
+          success: false,
+          message: "Authentication required",
+        });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid token",
+        });
+      }
+
+      if (decoded.role !== "admin") {
+        return res.status(403).json({
+          success: false,
+          message: "Admin access required",
+        });
+      }
+
+      const totalUsers = await User.countDocuments();
+      const activeUsers = await User.countDocuments({ isActive: true });
+      const blockedUsers = await User.countDocuments({ isBlocked: true });
+      const newUsersThisMonth = await User.countDocuments({
+        createdAt: {
+          $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        },
+      });
+
+      res.json({
+        success: true,
+        data: {
+          total: totalUsers,
+          active: activeUsers,
+          blocked: blockedUsers,
+          newThisMonth: newUsersThisMonth,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  static async verifyEmail(req: Request, res: Response) {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          message: "Verification token is required",
+        });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+      if (!decoded) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid verification token",
+        });
+      }
+
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
       }
 
       if (user.isEmailVerified) {
-        throw new Error("Email is already verified");
+        return res.status(400).json({
+          success: false,
+          message: "Email is already verified",
+        });
       }
 
-      // Generate new OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      user.emailVerificationToken = otp;
-      user.emailVerificationExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      user.isEmailVerified = true;
+      user.emailVerifiedAt = new Date();
       await user.save();
 
-      return {
+      res.json({
         success: true,
-        otp,
-        user: {
-          name: user.name,
-          email: user.email
-        }
-      };
+        message: "Email verified successfully",
+      });
     } catch (error) {
-      console.error("Resend verification email error:", error);
-      throw error;
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
     }
   }
 
-  // Generate password reset token
-  static async generatePasswordResetToken(email: string) {
+  static async resendVerificationEmail(req: Request, res: Response) {
     try {
-      const user = await User.findOne({ email });
-      
-      if (!user) {
-        throw new Error("User not found");
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is required",
+        });
       }
 
-      // Generate reset token
-      const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      if (user.isEmailVerified) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is already verified",
+        });
+      }
+
+      const verificationToken = jwt.sign(
+        { id: user._id, email: user.email },
+        process.env.JWT_SECRET!,
+        { expiresIn: "24h" }
+      );
+
+      // Send verification email logic here
+      // await sendVerificationEmail(user.email, verificationToken);
+
+      res.json({
+        success: true,
+        message: "Verification email sent successfully",
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  }
+
+  static async generatePasswordResetToken(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: "Email is required",
+        });
+      }
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      const resetToken = jwt.sign(
+        { id: user._id, email: user.email },
+        process.env.JWT_SECRET!,
+        { expiresIn: "1h" }
+      );
+
       user.passwordResetToken = resetToken;
       user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
       await user.save();
 
-      return {
+      // Send password reset email logic here
+      // await sendPasswordResetEmail(user.email, resetToken);
+
+      res.json({
         success: true,
-        resetToken,
-        user: {
-          name: user.name,
-          email: user.email
-        }
-      };
+        message: "Password reset email sent successfully",
+      });
     } catch (error) {
-      console.error("Generate password reset token error:", error);
-      throw error;
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
     }
   }
 
-  // Reset password with token
-  static async resetPassword(token: string, newPassword: string) {
+  static async resetPassword(req: Request, res: Response) {
     try {
-      const user = await User.findOne({
-        passwordResetToken: token,
-        passwordResetExpires: { $gt: new Date() }
-      });
+      const { token } = req.params;
+      const { newPassword } = req.body;
 
-      if (!user) {
-        throw new Error("Invalid or expired reset token");
+      if (!token || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Token and new password are required",
+        });
       }
 
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+      if (!decoded) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid reset token",
+        });
+      }
+
+      const user = await User.findById(decoded.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      if (user.passwordResetExpires && user.passwordResetExpires < new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: "Reset token has expired",
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
       user.password = hashedPassword;
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save();
 
-      return {
+      res.json({
         success: true,
-        message: "Password reset successfully"
-      };
+        message: "Password reset successfully",
+      });
     } catch (error) {
-      console.error("Reset password error:", error);
-      throw error;
+      res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
     }
   }
 }

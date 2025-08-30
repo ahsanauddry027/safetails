@@ -1,27 +1,26 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import Comment, { IComment } from '../models/Comment';
-import User from '../models/User';
+import { NextApiRequest, NextApiResponse } from "next";
+import Comment, { IComment } from "../models/Comment";
+import User from "../models/User";
 
-import { AuthenticatedRequest } from '../types/comment';
+import { AuthenticatedRequest } from "../types/comment";
 
 class CommentController {
   // Get all approved comments with user details
   static async getApprovedComments(req: NextApiRequest, res: NextApiResponse) {
     try {
       const comments = await Comment.find({ isApproved: true })
-        .populate('user', 'name email role')
+        .populate("user", "name email role")
         .sort({ createdAt: -1 })
         .limit(6);
 
       res.json({
         success: true,
-        data: comments
+        data: comments,
       });
     } catch (error) {
-      console.error('Error fetching comments:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch comments'
+        message: "Internal server error",
       });
     }
   }
@@ -36,14 +35,14 @@ class CommentController {
       if (!content || !rating) {
         return res.status(400).json({
           success: false,
-          message: 'Content and rating are required'
+          message: "Content and rating are required",
         });
       }
 
       if (rating < 1 || rating > 5) {
         return res.status(400).json({
           success: false,
-          message: 'Rating must be between 1 and 5'
+          message: "Rating must be between 1 and 5",
         });
       }
 
@@ -52,18 +51,18 @@ class CommentController {
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: 'User not found'
+          message: "User not found",
         });
       }
 
-      const userType = user.role === 'vet' ? 'vet' : 'user';
+      const userType = user.role === "vet" ? "vet" : "user";
 
       // Check if user has already commented
       const existingComment = await Comment.findOne({ user: userId });
       if (existingComment) {
         return res.status(400).json({
           success: false,
-          message: 'You have already submitted a review'
+          message: "You have already submitted a review",
         });
       }
 
@@ -73,24 +72,23 @@ class CommentController {
         userType,
         content,
         rating,
-        isApproved: false // Comments need approval by default
+        isApproved: false, // Comments need approval by default
       });
 
       await comment.save();
 
       // Populate user details for response
-      await comment.populate('user', 'name email role');
+      await comment.populate("user", "name email role");
 
       res.status(201).json({
         success: true,
-        message: 'Review submitted successfully and pending approval',
-        data: comment
+        message: "Review submitted successfully and pending approval",
+        data: comment,
       });
     } catch (error) {
-      console.error('Error creating comment:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to submit review'
+        message: "Internal server error",
       });
     }
   }
@@ -100,18 +98,19 @@ class CommentController {
     try {
       const userId = req.user.id;
 
-      const comment = await Comment.findOne({ user: userId })
-        .populate('user', 'name email role');
+      const comment = await Comment.findOne({ user: userId }).populate(
+        "user",
+        "name email role"
+      );
 
       res.json({
         success: true,
-        data: comment
+        data: comment,
       });
     } catch (error) {
-      console.error('Error fetching user comment:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch your review'
+        message: "Internal server error",
       });
     }
   }
@@ -126,14 +125,14 @@ class CommentController {
       if (!content || !rating) {
         return res.status(400).json({
           success: false,
-          message: 'Content and rating are required'
+          message: "Content and rating are required",
         });
       }
 
       if (rating < 1 || rating > 5) {
         return res.status(400).json({
           success: false,
-          message: 'Rating must be between 1 and 5'
+          message: "Rating must be between 1 and 5",
         });
       }
 
@@ -141,7 +140,7 @@ class CommentController {
       if (!comment) {
         return res.status(404).json({
           success: false,
-          message: 'Review not found'
+          message: "Review not found",
         });
       }
 
@@ -151,18 +150,17 @@ class CommentController {
       comment.isApproved = false; // Reset approval status after update
 
       await comment.save();
-      await comment.populate('user', 'name email role');
+      await comment.populate("user", "name email role");
 
       res.json({
         success: true,
-        message: 'Review updated successfully and pending approval',
-        data: comment
+        message: "Review updated successfully and pending approval",
+        data: comment,
       });
     } catch (error) {
-      console.error('Error updating comment:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to update review'
+        message: "Internal server error",
       });
     }
   }
@@ -176,19 +174,18 @@ class CommentController {
       if (!comment) {
         return res.status(404).json({
           success: false,
-          message: 'Review not found'
+          message: "Review not found",
         });
       }
 
       res.json({
         success: true,
-        message: 'Review deleted successfully'
+        message: "Review deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting comment:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to delete review'
+        message: "Internal server error",
       });
     }
   }
@@ -197,18 +194,17 @@ class CommentController {
   static async getAllComments(req: NextApiRequest, res: NextApiResponse) {
     try {
       const comments = await Comment.find()
-        .populate('user', 'name email role')
+        .populate("user", "name email role")
         .sort({ createdAt: -1 });
 
       res.json({
         success: true,
-        data: comments
+        data: comments,
       });
     } catch (error) {
-      console.error('Error fetching all comments:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch comments'
+        message: "Internal server error",
       });
     }
   }
@@ -223,25 +219,24 @@ class CommentController {
         commentId,
         { isApproved },
         { new: true }
-      ).populate('user', 'name email role');
+      ).populate("user", "name email role");
 
       if (!comment) {
         return res.status(404).json({
           success: false,
-          message: 'Comment not found'
+          message: "Comment not found",
         });
       }
 
       res.json({
         success: true,
-        message: `Comment ${isApproved ? 'approved' : 'rejected'} successfully`,
-        data: comment
+        message: `Comment ${isApproved ? "approved" : "rejected"} successfully`,
+        data: comment,
       });
     } catch (error) {
-      console.error('Error approving comment:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to update comment status'
+        message: "Internal server error",
       });
     }
   }
@@ -256,19 +251,18 @@ class CommentController {
       if (!comment) {
         return res.status(404).json({
           success: false,
-          message: 'Comment not found'
+          message: "Comment not found",
         });
       }
 
       res.json({
         success: true,
-        message: 'Comment deleted successfully'
+        message: "Comment deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting comment:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to delete comment'
+        message: "Internal server error",
       });
     }
   }

@@ -28,8 +28,10 @@ export default async function handler(
           .json({ message: `Method ${method} Not Allowed` });
     }
   } catch (error) {
-    console.error("Alert controller error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 }
 
@@ -123,24 +125,13 @@ async function getAlerts(req: NextApiRequest, res: NextApiResponse) {
           const shouldShow =
             distance <= alertRadius && alertRadius <= radiusNum;
 
-          // Log filtering decision for debugging
-          console.log(
-            `Alert ${alert._id}: distance=${distance.toFixed(2)}km, alertRadius=${alertRadius}km, searchRadius=${radiusNum}km, show=${shouldShow}`
-          );
-
           return shouldShow;
         });
 
         // Apply pagination to filtered results
         total = filteredAlerts.length;
         alerts = filteredAlerts.slice(skip, skip + limitNum);
-
-        // Log filtering summary
-        console.log(
-          `Radius filtering: ${allAlertsInRange.length} alerts in range, ${filteredAlerts.length} alerts after radius filter (max alert radius: ${radiusNum}km)`
-        );
       } catch (geoError: unknown) {
-        console.error("Geospatial query error:", geoError);
         // Fallback to regular query without geospatial filtering
         total = await Alert.countDocuments(filter);
 
@@ -175,24 +166,10 @@ async function getAlerts(req: NextApiRequest, res: NextApiResponse) {
       },
     });
   } catch (error: unknown) {
-    console.error("Error getting alerts:", error);
-
-    // Check if it's a geospatial index error
-    if (error && typeof error === "object" && "code" in error) {
-      const geoError = error as { code?: number; codeName?: string };
-      if (
-        geoError.code === 5626500 ||
-        geoError.codeName === "Location5626500"
-      ) {
-        return res.status(500).json({
-          message:
-            "Geospatial query error. Please ensure the database has proper geospatial indexes.",
-          error: "Geospatial index not available",
-        });
-      }
-    }
-
-    return res.status(500).json({ message: "Failed to fetch alerts" });
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch alerts",
+    });
   }
 }
 
@@ -247,8 +224,10 @@ async function createAlert(req: NextApiRequest, res: NextApiResponse) {
       data: alert,
     });
   } catch (error) {
-    console.error("Error creating alert:", error);
-    return res.status(500).json({ message: "Failed to create alert" });
+    res.status(500).json({
+      success: false,
+      message: "Failed to create alert",
+    });
   }
 }
 
@@ -294,8 +273,10 @@ async function updateAlert(req: NextApiRequest, res: NextApiResponse) {
       data: updatedAlert,
     });
   } catch (error) {
-    console.error("Error updating alert:", error);
-    return res.status(500).json({ message: "Failed to update alert" });
+    res.status(500).json({
+      success: false,
+      message: "Failed to update alert",
+    });
   }
 }
 
@@ -339,7 +320,9 @@ async function deleteAlert(req: NextApiRequest, res: NextApiResponse) {
       message: "Alert deleted successfully",
     });
   } catch (error) {
-    console.error("Error deleting alert:", error);
-    return res.status(500).json({ message: "Failed to delete alert" });
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete alert",
+    });
   }
 }

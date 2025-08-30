@@ -7,7 +7,10 @@ interface CreateVetEntryModalProps {
   onSuccess: () => void;
 }
 
-export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEntryModalProps) {
+export default function CreateVetEntryModal({
+  onClose,
+  onSuccess,
+}: CreateVetEntryModalProps) {
   const [formData, setFormData] = useState({
     clinicName: "",
     specialization: [] as string[],
@@ -45,64 +48,79 @@ export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEnt
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value, type } = e.target;
-    
+
     if (type === "checkbox") {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [name]: checked,
       }));
     } else if (name.includes(".")) {
       const [parent, child] = name.split(".");
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent as keyof typeof prev],
-          [child]: value,
-        },
-      }));
+      setFormData((prev) => {
+        const parentObj = prev[parent as keyof typeof prev];
+        if (parentObj && typeof parentObj === "object") {
+          return {
+            ...prev,
+            [parent]: {
+              ...parentObj,
+              [child]: value,
+            },
+          };
+        }
+        return prev;
+      });
     } else if (name.includes("[")) {
       const [parent, index] = name.split("[");
       const cleanIndex = parseInt(index.replace("]", ""));
       if (name.includes("specialization")) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          specialization: prev.specialization.map((_, i) => i === cleanIndex ? value : _),
+          specialization: prev.specialization.map((_, i) =>
+            i === cleanIndex ? value : _
+          ),
         }));
       } else if (name.includes("services")) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          services: prev.services.map((_, i) => i === cleanIndex ? value : _),
+          services: prev.services.map((_, i) => (i === cleanIndex ? value : _)),
         }));
       }
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
     }
   };
 
-  const handleSpecializationChange = (specialization: string, checked: boolean) => {
-    setFormData(prev => ({
+  const handleSpecializationChange = (
+    specialization: string,
+    checked: boolean
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      specialization: checked 
+      specialization: checked
         ? [...prev.specialization, specialization]
-        : prev.specialization.filter(s => s !== specialization),
+        : prev.specialization.filter((s) => s !== specialization),
     }));
   };
 
   const addService = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       services: [...prev.services, ""],
     }));
   };
 
   const removeService = (index: number) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       services: prev.services.filter((_, i) => i !== index),
     }));
@@ -118,8 +136,11 @@ export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEnt
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
-            const coordinates: [number, number] = [position.coords.longitude, position.coords.latitude];
-            
+            const coordinates: [number, number] = [
+              position.coords.longitude,
+              position.coords.latitude,
+            ];
+
             const submitData = {
               ...formData,
               location: {
@@ -132,8 +153,6 @@ export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEnt
             onSuccess();
           },
           (error) => {
-            console.log("Error getting location:", error);
-            // Submit without coordinates
             submitForm();
           }
         );
@@ -141,9 +160,17 @@ export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEnt
         // Submit without coordinates
         submitForm();
       }
-    } catch (err) {
-      console.error("Error creating vet entry:", err);
-      setError("Failed to create vet directory entry. Please try again.");
+    } catch (err: unknown) {
+      let errorMessage =
+        "Failed to create vet directory entry. Please try again.";
+      if (err && typeof err === "object" && "response" in err) {
+        const response = (err as { response?: { data?: { message?: string } } })
+          .response;
+        if (response?.data?.message) {
+          errorMessage = response.data.message;
+        }
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -153,9 +180,17 @@ export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEnt
     try {
       await axios.post("/api/vet-directory", formData);
       onSuccess();
-    } catch (err: any) {
-      console.error("Error creating vet entry:", err);
-      setError(err.response?.data?.message || "Failed to create vet directory entry. Please try again.");
+    } catch (err: unknown) {
+      let errorMessage =
+        "Failed to create vet directory entry. Please try again.";
+      if (err && typeof err === "object" && "response" in err) {
+        const response = (err as { response?: { data?: { message?: string } } })
+          .response;
+        if (response?.data?.message) {
+          errorMessage = response.data.message;
+        }
+      }
+      setError(errorMessage);
     }
   };
 
@@ -164,7 +199,9 @@ export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEnt
       <div className="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
         <div className="mt-3">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-semibold text-gray-900">Add Your Clinic to Vet Directory</h3>
+            <h3 className="text-2xl font-semibold text-gray-900">
+              Add Your Clinic to Vet Directory
+            </h3>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
@@ -217,15 +254,28 @@ export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEnt
                 Specializations
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {["emergency", "surgery", "vaccination", "checkup", "dental", "orthopedic", "dermatology", "cardiology"].map((spec) => (
+                {[
+                  "emergency",
+                  "surgery",
+                  "vaccination",
+                  "checkup",
+                  "dental",
+                  "orthopedic",
+                  "dermatology",
+                  "cardiology",
+                ].map((spec) => (
                   <label key={spec} className="flex items-center">
                     <input
                       type="checkbox"
                       checked={formData.specialization.includes(spec)}
-                      onChange={(e) => handleSpecializationChange(spec, e.target.checked)}
+                      onChange={(e) =>
+                        handleSpecializationChange(spec, e.target.checked)
+                      }
                       className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                     />
-                    <span className="ml-2 text-sm text-gray-700 capitalize">{spec}</span>
+                    <span className="ml-2 text-sm text-gray-700 capitalize">
+                      {spec}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -348,7 +398,9 @@ export default function CreateVetEntryModal({ onClose, onSuccess }: CreateVetEnt
                   onChange={handleInputChange}
                   className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                 />
-                <span className="ml-2 text-sm text-gray-700">Emergency Services Available</span>
+                <span className="ml-2 text-sm text-gray-700">
+                  Emergency Services Available
+                </span>
               </label>
 
               <label className="flex items-center">

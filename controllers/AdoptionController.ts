@@ -1,28 +1,35 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import dbConnect from '@/utils/db';
-import Adoption from '@/models/Adoption';
-import AdoptionApplication from '@/models/AdoptionApplication';
-import User from '@/models/User';
-import { verifyToken } from '@/utils/auth';
+import { NextApiRequest, NextApiResponse } from "next";
+import dbConnect from "@/utils/db";
+import Adoption from "@/models/Adoption";
+import AdoptionApplication from "@/models/AdoptionApplication";
+import User from "@/models/User";
+import { verifyToken } from "@/utils/auth";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   await dbConnect();
 
   const { method } = req;
 
   try {
     switch (method) {
-      case 'GET':
+      case "GET":
         return await getAdoptions(req, res);
-      case 'POST':
+      case "POST":
         return await createAdoption(req, res);
       default:
-        res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ message: `Method ${method} Not Allowed` });
+        res.setHeader("Allow", ["GET", "POST"]);
+        return res
+          .status(405)
+          .json({ message: `Method ${method} Not Allowed` });
     }
   } catch (error) {
-    console.error('Adoption controller error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 }
 
@@ -30,14 +37,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getAdoptions(req: NextApiRequest, res: NextApiResponse) {
   try {
     const {
-      page = '1',
-      limit = '10',
+      page = "1",
+      limit = "10",
       status,
       adoptionType,
       petType,
       search,
       minAge,
-      maxAge
+      maxAge,
     } = req.query;
 
     const pageNum = parseInt(page as string);
@@ -46,25 +53,25 @@ async function getAdoptions(req: NextApiRequest, res: NextApiResponse) {
 
     // Build filter object
     const filter: any = {};
-    
+
     if (status) filter.status = status;
     if (adoptionType) filter.adoptionType = adoptionType;
     if (petType) filter.petType = petType;
-    
+
     if (search) {
       filter.$or = [
-        { description: { $regex: search, $options: 'i' } },
-        { petBreed: { $regex: search, $options: 'i' } }
+        { description: { $regex: search, $options: "i" } },
+        { petBreed: { $regex: search, $options: "i" } },
       ];
     }
 
     // Get total count
     const total = await Adoption.countDocuments(filter);
-    
+
     // Get adoptions with pagination
     const adoptions = await Adoption.find(filter)
-      .populate('userId', 'name email phone')
-      .populate('adopter.userId', 'name email phone')
+      .populate("userId", "name email phone")
+      .populate("adopter.userId", "name email phone")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limitNum);
@@ -79,12 +86,14 @@ async function getAdoptions(req: NextApiRequest, res: NextApiResponse) {
         totalPages,
         total,
         hasNext: pageNum < totalPages,
-        hasPrev: pageNum > 1
-      }
+        hasPrev: pageNum > 1,
+      },
     });
   } catch (error) {
-    console.error('Error getting adoptions:', error);
-    return res.status(500).json({ message: 'Failed to fetch adoptions' });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 }
 
@@ -94,12 +103,12 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
     // Verify authentication
     const token = req.cookies.token;
     if (!token) {
-      return res.status(401).json({ message: 'Authentication required' });
+      return res.status(401).json({ message: "Authentication required" });
     }
 
     const decoded = await verifyToken(token);
     if (!decoded) {
-      return res.status(401).json({ message: 'Invalid token' });
+      return res.status(401).json({ message: "Invalid token" });
     }
 
     const {
@@ -120,12 +129,12 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
       medicalHistory,
       temperament,
       goodWith,
-      requirements
+      requirements,
     } = req.body;
 
     // Validate required fields
     if (!petType || !description || !adoptionType) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({ message: "Missing required fields" });
     }
 
     // Create adoption listing
@@ -133,7 +142,7 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
       petType,
       petBreed: petBreed || undefined,
       petAge: petAge || undefined,
-      petGender: petGender || 'unknown',
+      petGender: petGender || "unknown",
       petColor: petColor || undefined,
       petCategory: petCategory || undefined,
       description,
@@ -150,25 +159,27 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
         children: false,
         otherDogs: false,
         otherCats: false,
-        otherPets: false
+        otherPets: false,
       },
       requirements: requirements || [],
       userId: decoded.id,
-      status: 'available'
+      status: "available",
     });
 
     await adoption.save();
 
     // Populate user info
-    await adoption.populate('userId', 'name email phone');
+    await adoption.populate("userId", "name email phone");
 
     return res.status(201).json({
       success: true,
-      message: 'Adoption listing created successfully',
-      data: adoption
+      message: "Adoption listing created successfully",
+      data: adoption,
     });
   } catch (error) {
-    console.error('Error creating adoption listing:', error);
-    return res.status(500).json({ message: 'Failed to create adoption listing' });
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 }
