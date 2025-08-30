@@ -34,10 +34,15 @@ export default async function handler(
         return res.status(403).json({ error: "Access denied" });
       }
 
-      const stats = await VetRequestController.getVetStats(user._id);
-      const requests = await VetRequestController.getVetRequests(user._id);
+      try {
+        const stats = await VetRequestController.getVetRequestStats(user._id);
+        const requests = await VetRequestController.getVetAssignedRequests(user._id);
 
-      return res.status(200).json({ stats, requests });
+        return res.status(200).json({ stats, requests });
+      } catch (error) {
+        console.error("Error fetching vet data:", error);
+        return res.status(500).json({ error: "Failed to fetch vet data" });
+      }
     }
 
     // For POST requests, create a new request

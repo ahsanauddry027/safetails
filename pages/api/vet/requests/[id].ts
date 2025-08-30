@@ -47,7 +47,7 @@ export default async function handler(
 
         if (action === "assign") {
           // Assign the vet to this request and change status to accepted
-          const updatedRequest = await VetRequestController.assignVet(
+          const updatedRequest = await VetRequestController.assignVetToRequest(
             requestId,
             user._id
           );
