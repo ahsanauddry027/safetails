@@ -361,13 +361,8 @@ export class VetRequestController {
         throw new Error("Vet request not found");
       }
 
-      // Only allow deletion of completed or cancelled requests
-      if (
-        vetRequest.status !== "completed" &&
-        vetRequest.status !== "cancelled"
-      ) {
-        throw new Error("Only completed or cancelled requests can be deleted");
-      }
+      // Allow deletion of any request status (pending, accepted, completed, cancelled)
+      // Vets can reject/delete any request they don't want to handle
 
       await VetRequest.findByIdAndDelete(requestId);
       return { message: "Request deleted successfully" };

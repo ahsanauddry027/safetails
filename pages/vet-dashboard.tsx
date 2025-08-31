@@ -203,11 +203,17 @@ export default function VetDashboard() {
 
   // Function to handle rejecting a request
   const handleRejectRequest = async (requestId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to reject and delete this request? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
     try {
-      await axios.put(`/api/vet/requests/${requestId}`, {
-        status: "cancelled",
-      });
-      // Refresh data after update
+      await axios.delete(`/api/vet/requests/${requestId}`);
+      // Refresh data after deletion
       fetchVetData();
     } catch (err) {
       console.error("Error rejecting request:", err);
@@ -692,11 +698,11 @@ export default function VetDashboard() {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                                   />
                                 </svg>
                                 <span className="font-bold text-xs">
-                                  Reject
+                                  Reject & Delete
                                 </span>
                               </button>
                             </>
@@ -726,9 +732,8 @@ export default function VetDashboard() {
                             </button>
                           )}
 
-                          {/* Delete button - visible for completed or cancelled requests */}
-                          {(request.status === "completed" ||
-                            request.status === "cancelled") && (
+                          {/* Delete button - visible for completed requests only */}
+                          {request.status === "completed" && (
                             <button
                               onClick={() => handleDeleteRequest(request._id)}
                               className="group relative inline-flex items-center px-3 py-2 border-2 border-gray-500 text-gray-500 bg-white rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-gray-500 hover:text-white transform hover:-translate-y-1"
@@ -1081,7 +1086,7 @@ export default function VetDashboard() {
                       }}
                       className="px-6 py-3 text-white bg-red-500 rounded-2xl font-bold hover:bg-red-600 transition-colors duration-300"
                     >
-                      Reject Request
+                      Reject & Delete
                     </button>
                   </>
                 )}
@@ -1098,8 +1103,7 @@ export default function VetDashboard() {
                   </button>
                 )}
 
-                {(selectedRequest.status === "completed" ||
-                  selectedRequest.status === "cancelled") && (
+                {selectedRequest.status === "completed" && (
                   <button
                     onClick={() => {
                       handleDeleteRequest(selectedRequest._id);
