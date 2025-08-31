@@ -6,7 +6,10 @@ import { VetRequestController } from "@/controllers/VetRequestController";
 import { verifyTokenAndCheckBlocked } from "@/utils/auth";
 import cookie from "cookie";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { method } = req;
 
   await dbConnect();
@@ -17,17 +20,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Extract query parameters
         const { postType, status, limit = "20", page = "1" } = req.query;
         const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-        
+
         // Get posts with optional filtering
         const result = await PetPostController.getPosts(
           { postType, status },
           parseInt(limit as string),
           skip
         );
-        
+
         res.status(200).json(result);
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error occurred";
         res.status(500).json({ success: false, message: errorMessage });
       }
       break;
@@ -37,17 +41,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Check if user is authenticated
         const cookies = cookie.parse(req.headers.cookie || "");
         const token = cookies.token;
-        
+
         if (!token) {
-          return res.status(401).json({ success: false, message: "Not authenticated" });
+          return res
+            .status(401)
+            .json({ success: false, message: "Not authenticated" });
         }
-        
+
         // Verify token and get user ID
         const decoded = await verifyTokenAndCheckBlocked(token);
         if (!decoded || !decoded.id) {
-          return res.status(401).json({ success: false, message: "Invalid token" });
+          return res
+            .status(401)
+            .json({ success: false, message: "Invalid token" });
         }
-        
+
         // Check if this is a vet-consultant request
         if (req.body.postType === "vet-consultant") {
           // Create a VetRequest instead of a PetPost
@@ -62,18 +70,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             description: req.body.description,
             contactPhone: req.body.contactPhone,
             contactEmail: req.body.contactEmail,
-            location: req.body.location
+            location: req.body.location,
+            images: req.body.images || [],
           };
-          
-          const newRequest = await VetRequestController.createRequest(vetRequestData);
-          res.status(201).json({ success: true, data: newRequest, type: 'vet-request' });
+
+          const newRequest =
+            await VetRequestController.createRequest(vetRequestData);
+          res
+            .status(201)
+            .json({ success: true, data: newRequest, type: "vet-request" });
         } else {
           // Create post for other types (missing, emergency, wounded)
-          const newPost = await PetPostController.createPost(req.body, decoded.id);
+          const newPost = await PetPostController.createPost(
+            req.body,
+            decoded.id
+          );
           res.status(201).json({ success: true, data: newPost });
         }
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error occurred";
         res.status(500).json({ success: false, message: errorMessage });
       }
       break;

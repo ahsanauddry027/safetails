@@ -225,11 +225,12 @@ const CreatePost = () => {
     setIsSubmitting(true);
     setError("");
 
-    // Validate location coordinates
+    // Validate location coordinates (not required for vet-consultant)
     if (
-      !location.coordinates ||
-      location.coordinates[0] === 0 ||
-      location.coordinates[1] === 0
+      formData.postType !== "vet-consultant" &&
+      (!location.coordinates ||
+        location.coordinates[0] === 0 ||
+        location.coordinates[1] === 0)
     ) {
       setError("Please select a location on the map before submitting.");
       setIsSubmitting(false);
@@ -240,13 +241,16 @@ const CreatePost = () => {
       // Prepare data for submission
       const postData = {
         ...formData,
-        location: {
-          ...location,
+        // Only include location data if not a vet-consultant post
+        ...(formData.postType !== "vet-consultant" && {
+          location: {
+            ...location,
+            city: location.city || "",
+            state: location.state || "",
+          },
           city: location.city || "",
           state: location.state || "",
-        },
-        city: location.city || "",
-        state: location.state || "",
+        }),
       };
 
       console.log("Submitting post data:", {
@@ -613,50 +617,52 @@ const CreatePost = () => {
                 ></textarea>
               </div>
 
-              {/* Location Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label
-                    htmlFor="city"
-                    className="block text-lg font-semibold text-gray-700 mb-2"
-                  >
-                    City *
-                  </label>
-                  <input
-                    type="text"
-                    id="city"
-                    name="city"
-                    value={location.city || ""}
-                    onChange={(e) =>
-                      setLocation({ ...location, city: e.target.value })
-                    }
-                    className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
-                    required
-                    placeholder="Enter city name"
-                  />
-                </div>
+              {/* Location Information - Not required for vet consultant */}
+              {formData.postType !== "vet-consultant" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label
+                      htmlFor="city"
+                      className="block text-lg font-semibold text-gray-700 mb-2"
+                    >
+                      City *
+                    </label>
+                    <input
+                      type="text"
+                      id="city"
+                      name="city"
+                      value={location.city || ""}
+                      onChange={(e) =>
+                        setLocation({ ...location, city: e.target.value })
+                      }
+                      className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+                      required
+                      placeholder="Enter city name"
+                    />
+                  </div>
 
-                <div>
-                  <label
-                    htmlFor="state"
-                    className="block text-lg font-semibold text-gray-700 mb-2"
-                  >
-                    State *
-                  </label>
-                  <input
-                    type="text"
-                    id="state"
-                    name="state"
-                    value={location.state || ""}
-                    onChange={(e) =>
-                      setLocation({ ...location, state: e.target.value })
-                    }
-                    className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
-                    required
-                    placeholder="Enter state name"
-                  />
+                  <div>
+                    <label
+                      htmlFor="state"
+                      className="block text-lg font-semibold text-gray-700 mb-2"
+                    >
+                      State *
+                    </label>
+                    <input
+                      type="text"
+                      id="state"
+                      name="state"
+                      value={location.state || ""}
+                      onChange={(e) =>
+                        setLocation({ ...location, state: e.target.value })
+                      }
+                      className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+                      required
+                      placeholder="Enter state name"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Last Seen Date (for missing pets) */}
               {formData.postType === "missing" && (
@@ -718,118 +724,121 @@ const CreatePost = () => {
                 </div>
               </div>
 
-              {/* Location Map */}
-              <div>
-                <label className="block text-lg font-semibold text-gray-700 mb-2">
-                  Location *
-                </label>
-                <p className="text-gray-600 mb-4">
-                  Click on the map to set the location where the pet was last
-                  seen or found. The red marker shows your selected location.
-                </p>
-
-                {/* Use Current Location Button */}
-                <div className="mb-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (userLocation) {
-                        setLocation({
-                          ...location,
-                          coordinates: [userLocation.lng, userLocation.lat], // [longitude, latitude] for database
-                        });
-                      } else {
-                        // Try to get location again
-                        if (navigator.geolocation) {
-                          navigator.geolocation.getCurrentPosition(
-                            (position) => {
-                              const { latitude, longitude } = position.coords;
-                              setUserLocation({
-                                lat: latitude,
-                                lng: longitude,
-                              });
-                              setLocation({
-                                ...location,
-                                coordinates: [longitude, latitude], // [longitude, latitude] for database
-                              });
-                            },
-                            (error: GeolocationPositionError) => {
-                              console.error("Error getting location:", error);
-                              setError(
-                                "Could not get your current location. Please click on the map instead."
-                              );
-                            }
-                          );
-                        }
-                      }
-                    }}
-                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
-                  >
-                    Use Current Location
-                  </button>
-                </div>
-
-                <div
-                  style={mapContainerStyle}
-                  className="rounded-2xl overflow-hidden border-2 border-gray-300"
-                >
-                  <LeafletMap
-                    center={
-                      userLocation
-                        ? [userLocation.lat, userLocation.lng]
-                        : [defaultCenter.lat, defaultCenter.lng]
-                    }
-                    onMapClick={handleMapClick}
-                    markers={[
-                      {
-                        position: [
-                          location.coordinates[1],
-                          location.coordinates[0],
-                        ], // Convert to [latitude, longitude] for map
-                        popup: "Selected Location",
-                        isSelected: true,
-                      },
-                    ]}
-                    height="400px"
-                  />
-                </div>
-
-                {/* Coordinate Display */}
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-600 mb-2">
-                    <strong>Selected Coordinates:</strong>
-                  </p>
-                  <p className="text-sm font-mono text-gray-800">
-                    Latitude: {location.coordinates[1]?.toFixed(6) || "Not set"}
-                    , Longitude:{" "}
-                    {location.coordinates[0]?.toFixed(6) || "Not set"}
-                  </p>
-                  {location.coordinates[0] !== 0 &&
-                    location.coordinates[1] !== 0 && (
-                      <p className="text-xs text-green-600 mt-2">
-                        ✅ Location set successfully! Click on the map to change
-                        it.
-                      </p>
-                    )}
-                </div>
-
-                <div className="mt-4">
-                  <label
-                    htmlFor="locationDescription"
-                    className="block text-lg font-semibold text-gray-700 mb-2"
-                  >
-                    Location Description
+              {/* Location Map - Not required for vet consultant */}
+              {formData.postType !== "vet-consultant" && (
+                <div>
+                  <label className="block text-lg font-semibold text-gray-700 mb-2">
+                    Location *
                   </label>
-                  <textarea
-                    id="locationDescription"
-                    value={location.description}
-                    onChange={handleLocationDescChange}
-                    rows={2}
-                    className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
-                    placeholder="E.g., Near the playground in Central Park"
-                  ></textarea>
+                  <p className="text-gray-600 mb-4">
+                    Click on the map to set the location where the pet was last
+                    seen or found. The red marker shows your selected location.
+                  </p>
+
+                  {/* Use Current Location Button */}
+                  <div className="mb-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (userLocation) {
+                          setLocation({
+                            ...location,
+                            coordinates: [userLocation.lng, userLocation.lat], // [longitude, latitude] for database
+                          });
+                        } else {
+                          // Try to get location again
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                              (position) => {
+                                const { latitude, longitude } = position.coords;
+                                setUserLocation({
+                                  lat: latitude,
+                                  lng: longitude,
+                                });
+                                setLocation({
+                                  ...location,
+                                  coordinates: [longitude, latitude], // [longitude, latitude] for database
+                                });
+                              },
+                              (error: GeolocationPositionError) => {
+                                console.error("Error getting location:", error);
+                                setError(
+                                  "Could not get your current location. Please click on the map instead."
+                                );
+                              }
+                            );
+                          }
+                        }
+                      }}
+                      className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors duration-200 text-sm font-medium"
+                    >
+                      Use Current Location
+                    </button>
+                  </div>
+
+                  <div
+                    style={mapContainerStyle}
+                    className="rounded-2xl overflow-hidden border-2 border-gray-300"
+                  >
+                    <LeafletMap
+                      center={
+                        userLocation
+                          ? [userLocation.lat, userLocation.lng]
+                          : [defaultCenter.lat, defaultCenter.lng]
+                      }
+                      onMapClick={handleMapClick}
+                      markers={[
+                        {
+                          position: [
+                            location.coordinates[1],
+                            location.coordinates[0],
+                          ], // Convert to [latitude, longitude] for map
+                          popup: "Selected Location",
+                          isSelected: true,
+                        },
+                      ]}
+                      height="400px"
+                    />
+                  </div>
+
+                  {/* Coordinate Display */}
+                  <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600 mb-2">
+                      <strong>Selected Coordinates:</strong>
+                    </p>
+                    <p className="text-sm font-mono text-gray-800">
+                      Latitude:{" "}
+                      {location.coordinates[1]?.toFixed(6) || "Not set"},
+                      Longitude:{" "}
+                      {location.coordinates[0]?.toFixed(6) || "Not set"}
+                    </p>
+                    {location.coordinates[0] !== 0 &&
+                      location.coordinates[1] !== 0 && (
+                        <p className="text-xs text-green-600 mt-2">
+                          ✅ Location set successfully! Click on the map to
+                          change it.
+                        </p>
+                      )}
+                  </div>
+
+                  <div className="mt-4">
+                    <label
+                      htmlFor="locationDescription"
+                      className="block text-lg font-semibold text-gray-700 mb-2"
+                    >
+                      Location Description
+                    </label>
+                    <textarea
+                      id="locationDescription"
+                      value={location.description}
+                      onChange={handleLocationDescChange}
+                      rows={2}
+                      className="w-full p-4 border-2 border-gray-300 rounded-2xl focus:ring-2 focus:ring-black focus:border-black transition-all duration-300 text-lg"
+                      placeholder="E.g., Near the playground in Central Park"
+                    ></textarea>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Submit Button */}
               <div className="flex justify-end space-x-4">

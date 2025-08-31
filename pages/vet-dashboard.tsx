@@ -9,10 +9,25 @@ import axios from "axios";
 interface VetRequest {
   _id: string;
   petName: string;
+  petType: string;
+  petBreed?: string;
+  petAge?: string;
+  petGender?: string;
   requestType: string;
+  description: string;
   status: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  images?: string[];
+  createdAt: string;
   userId?: {
     name: string;
+    email?: string;
+    phone?: string;
+  };
+  vetId?: {
+    name: string;
+    email?: string;
   };
 }
 
@@ -44,6 +59,10 @@ export default function VetDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState("");
   const [location, setLocation] = useState<LocationState | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<VetRequest | null>(
+    null
+  );
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -63,12 +82,16 @@ export default function VetDashboard() {
       const response = await axios.get("/api/vet/requests");
 
       if (response.data) {
-        setRequests(response.data.requests || []);
-        console.log(response.data);
+        // The requests are now in response.data.requests.data
+        const requestsData = response.data.requests?.data || [];
+        setRequests(requestsData);
+        console.log("Vet requests data:", response.data);
+        console.log("First request images:", requestsData[0]?.images);
         setStats({
-          activeCases: response.data.stats?.activeCases || 0,
-          completedCases: response.data.stats?.completedCases || 0,
-          pendingConsultations: response.data.stats?.pendingConsultations || 0,
+          activeCases: response.data.stats?.data?.activeCases || 0,
+          completedCases: response.data.stats?.data?.completedCases || 0,
+          pendingConsultations:
+            response.data.stats?.data?.pendingConsultations || 0,
         });
       }
     } catch (err) {
@@ -178,6 +201,54 @@ export default function VetDashboard() {
     }
   };
 
+  // Function to handle rejecting a request
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await axios.put(`/api/vet/requests/${requestId}`, {
+        status: "cancelled",
+      });
+      // Refresh data after update
+      fetchVetData();
+    } catch (err) {
+      console.error("Error rejecting request:", err);
+      setError("Failed to reject request. Please try again.");
+    }
+  };
+
+  // Function to handle deleting a request
+  const handleDeleteRequest = async (requestId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this request? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await axios.delete(`/api/vet/requests/${requestId}`);
+      // Refresh data after update
+      fetchVetData();
+    } catch (err) {
+      console.error("Error deleting request:", err);
+      setError("Failed to delete request. Please try again.");
+    }
+  };
+
+  // Function to handle viewing request details
+  const handleViewDetails = (request: VetRequest) => {
+    console.log("Selected request details:", request);
+    console.log("Selected request images:", request.images);
+    setSelectedRequest(request);
+    setShowDetailsModal(true);
+  };
+
+  // Function to close the details modal
+  const closeDetailsModal = () => {
+    setSelectedRequest(null);
+    setShowDetailsModal(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -282,7 +353,9 @@ export default function VetDashboard() {
                 </svg>
               </div>
               <div className="ml-6">
-                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">Completed</p>
+                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">
+                  Completed
+                </p>
                 <p className="text-4xl font-bold text-black">
                   {stats.completedCases || 0}
                 </p>
@@ -308,7 +381,9 @@ export default function VetDashboard() {
                 </svg>
               </div>
               <div className="ml-6">
-                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">Pending</p>
+                <p className="text-lg font-semibold text-gray-600 group-hover:text-black transition-colors duration-300">
+                  Pending
+                </p>
                 <p className="text-4xl font-bold text-black">
                   {stats.pendingConsultations || 0}
                 </p>
@@ -321,8 +396,18 @@ export default function VetDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           <div className="group bg-white rounded-3xl shadow-lg p-8 border-4 border-gray-200 hover:border-black transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <h3 className="text-2xl font-bold text-black mb-6 flex items-center group-hover:text-primary transition-colors duration-300">
-              <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <svg
+                className="w-6 h-6 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
               </svg>
               Quick Actions
             </h3>
@@ -331,21 +416,27 @@ export default function VetDashboard() {
                 href="/posts?postType=emergency"
                 className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
               >
-                <span className="relative z-10 font-bold">Emergency Pet Posts</span>
+                <span className="relative z-10 font-bold">
+                  Emergency Pet Posts
+                </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
               <Link
                 href="/posts?postType=wounded"
                 className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
               >
-                <span className="relative z-10 font-bold">Wounded Pet Posts</span>
+                <span className="relative z-10 font-bold">
+                  Wounded Pet Posts
+                </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
               <Link
                 href="/posts?postType=missing"
                 className="group relative block w-full text-center px-6 py-4 text-white bg-black border-2 border-black rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-gray-800 hover:bg-gray-800 transform hover:-translate-y-1"
               >
-                <span className="relative z-10 font-bold">Missing Pet Posts</span>
+                <span className="relative z-10 font-bold">
+                  Missing Pet Posts
+                </span>
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </Link>
             </div>
@@ -354,9 +445,24 @@ export default function VetDashboard() {
           {/* Enhanced Nearby Emergency Posts */}
           <div className="group bg-white rounded-3xl shadow-lg p-8 border-4 border-gray-200 hover:border-black transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
             <h3 className="text-2xl font-bold text-black mb-6 flex items-center group-hover:text-primary transition-colors duration-300">
-              <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              <svg
+                className="w-6 h-6 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
               Nearby Emergency Posts
             </h3>
@@ -370,8 +476,8 @@ export default function VetDashboard() {
                           <div className="flex items-center">
                             <span
                               className={`px-3 py-1 text-sm rounded-full font-bold mr-3 ${
-                                post.postType === "emergency" 
-                                  ? "bg-red-100 text-red-800" 
+                                post.postType === "emergency"
+                                  ? "bg-red-100 text-red-800"
                                   : "bg-orange-100 text-orange-800"
                               }`}
                             >
@@ -409,11 +515,23 @@ export default function VetDashboard() {
             ) : (
               <div className="text-center py-8">
                 <div className="text-gray-400 mb-4">
-                  <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33" />
+                  <svg
+                    className="mx-auto h-16 w-16"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.47-.881-6.08-2.33"
+                    />
                   </svg>
                 </div>
-                <p className="text-gray-500 text-lg">No nearby emergency posts found.</p>
+                <p className="text-gray-500 text-lg">
+                  No nearby emergency posts found.
+                </p>
               </div>
             )}
           </div>
@@ -422,8 +540,18 @@ export default function VetDashboard() {
         {/* Enhanced Vet Requests Section */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 mb-12 border-4 border-gray-200 hover:border-black transition-all duration-300">
           <h3 className="text-3xl font-bold text-black mb-8 flex items-center">
-            <svg className="w-8 h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            <svg
+              className="w-8 h-8 mr-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
             </svg>
             Vet Requests
           </h3>
@@ -451,7 +579,10 @@ export default function VetDashboard() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {requests.map((request) => (
-                    <tr key={request._id} className="hover:bg-gray-50 transition-colors duration-200">
+                    <tr
+                      key={request._id}
+                      className="hover:bg-gray-50 transition-colors duration-200"
+                    >
                       <td className="px-6 py-6 whitespace-nowrap">
                         <div className="text-lg font-bold text-black">
                           {request.petName}
@@ -485,7 +616,9 @@ export default function VetDashboard() {
                                 ? "bg-blue-100 text-blue-800"
                                 : request.status === "completed"
                                   ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-800"
+                                  : request.status === "cancelled"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-800"
                           }`}
                         >
                           {request.status.charAt(0).toUpperCase() +
@@ -493,35 +626,89 @@ export default function VetDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-6 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-3">
-                          {request.status === "pending" && (
-                            <button
-                              onClick={() => handleAcceptRequest(request._id)}
-                              className="group relative inline-flex items-center px-4 py-2 border-2 border-black text-black bg-white rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-black hover:text-white transform hover:-translate-y-1"
+                        <div className="flex flex-wrap gap-2">
+                          {/* View Details Button - Always visible */}
+                          <button
+                            onClick={() => handleViewDetails(request)}
+                            className="group relative inline-flex items-center px-3 py-2 border-2 border-blue-500 text-blue-500 bg-white rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-blue-500 hover:text-white transform hover:-translate-y-1"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <svg
-                                className="w-4 h-4 mr-2"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
+                            </svg>
+                            <span className="font-bold text-xs">View</span>
+                          </button>
+
+                          {/* Status-specific action buttons */}
+                          {request.status === "pending" && (
+                            <>
+                              <button
+                                onClick={() => handleAcceptRequest(request._id)}
+                                className="group relative inline-flex items-center px-3 py-2 border-2 border-green-500 text-green-500 bg-white rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-green-500 hover:text-white transform hover:-translate-y-1"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              <span className="font-bold">Accept</span>
-                            </button>
+                                <svg
+                                  className="w-4 h-4 mr-1"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                <span className="font-bold text-xs">
+                                  Accept
+                                </span>
+                              </button>
+                              <button
+                                onClick={() => handleRejectRequest(request._id)}
+                                className="group relative inline-flex items-center px-3 py-2 border-2 border-red-500 text-red-500 bg-white rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-red-500 hover:text-white transform hover:-translate-y-1"
+                              >
+                                <svg
+                                  className="w-4 h-4 mr-1"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                                <span className="font-bold text-xs">
+                                  Reject
+                                </span>
+                              </button>
+                            </>
                           )}
+
                           {request.status === "accepted" && (
                             <button
                               onClick={() => handleCompleteRequest(request._id)}
-                              className="group relative inline-flex items-center px-4 py-2 border-2 border-black text-black bg-white rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-black hover:text-white transform hover:-translate-y-1"
+                              className="group relative inline-flex items-center px-3 py-2 border-2 border-blue-500 text-blue-500 bg-white rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-blue-500 hover:text-white transform hover:-translate-y-1"
                             >
                               <svg
-                                className="w-4 h-4 mr-2"
+                                className="w-4 h-4 mr-1"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -533,13 +720,40 @@ export default function VetDashboard() {
                                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                                 />
                               </svg>
-                              <span className="font-bold">Complete</span>
+                              <span className="font-bold text-xs">
+                                Complete
+                              </span>
                             </button>
                           )}
-                          {request.status === "completed" && (
-                            <span className="inline-flex items-center px-4 py-2 text-green-700 bg-green-50 rounded-xl font-bold">
+
+                          {/* Delete button - visible for completed or cancelled requests */}
+                          {(request.status === "completed" ||
+                            request.status === "cancelled") && (
+                            <button
+                              onClick={() => handleDeleteRequest(request._id)}
+                              className="group relative inline-flex items-center px-3 py-2 border-2 border-gray-500 text-gray-500 bg-white rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg hover:bg-gray-500 hover:text-white transform hover:-translate-y-1"
+                            >
                               <svg
-                                className="w-4 h-4 mr-2"
+                                className="w-4 h-4 mr-1"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                              <span className="font-bold text-xs">Delete</span>
+                            </button>
+                          )}
+
+                          {request.status === "completed" && (
+                            <span className="inline-flex items-center px-3 py-2 text-green-700 bg-green-50 rounded-xl font-bold text-xs">
+                              <svg
+                                className="w-4 h-4 mr-1"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                               >
@@ -576,7 +790,9 @@ export default function VetDashboard() {
                   />
                 </svg>
               </div>
-              <p className="text-gray-500 text-xl font-medium">No vet requests found</p>
+              <p className="text-gray-500 text-xl font-medium">
+                No vet requests found
+              </p>
               <p className="text-gray-400 mt-2">
                 New veterinary requests will appear here
               </p>
@@ -587,27 +803,318 @@ export default function VetDashboard() {
         {/* Enhanced Emergency Contacts */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 border-4 border-gray-200 hover:border-black transition-all duration-300">
           <h3 className="text-3xl font-bold text-black mb-8 flex items-center">
-            <svg className="w-8 h-8 mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            <svg
+              className="w-8 h-8 mr-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+              />
             </svg>
             Emergency Contacts
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="group p-6 border-4 border-gray-200 rounded-2xl hover:border-black transition-all duration-300 hover:shadow-lg">
-              <h4 className="text-xl font-bold text-black mb-2 group-hover:text-primary transition-colors duration-300">Animal Control</h4>
-              <p className="text-lg text-gray-600 font-medium">(555) 123-4567</p>
+              <h4 className="text-xl font-bold text-black mb-2 group-hover:text-primary transition-colors duration-300">
+                Animal Control
+              </h4>
+              <p className="text-lg text-gray-600 font-medium">
+                (555) 123-4567
+              </p>
             </div>
             <div className="group p-6 border-4 border-gray-200 rounded-2xl hover:border-black transition-all duration-300 hover:shadow-lg">
-              <h4 className="text-xl font-bold text-black mb-2 group-hover:text-primary transition-colors duration-300">Emergency Vet</h4>
-              <p className="text-lg text-gray-600 font-medium">(555) 987-6543</p>
+              <h4 className="text-xl font-bold text-black mb-2 group-hover:text-primary transition-colors duration-300">
+                Emergency Vet
+              </h4>
+              <p className="text-lg text-gray-600 font-medium">
+                (555) 987-6543
+              </p>
             </div>
             <div className="group p-6 border-4 border-gray-200 rounded-2xl hover:border-black transition-all duration-300 hover:shadow-lg">
-              <h4 className="text-xl font-bold text-black mb-2 group-hover:text-primary transition-colors duration-300">Rescue Center</h4>
-              <p className="text-lg text-gray-600 font-medium">(555) 456-7890</p>
+              <h4 className="text-xl font-bold text-black mb-2 group-hover:text-primary transition-colors duration-300">
+                Rescue Center
+              </h4>
+              <p className="text-lg text-gray-600 font-medium">
+                (555) 456-7890
+              </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Request Details Modal */}
+      {showDetailsModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-8">
+              {/* Modal Header */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-bold text-black">
+                  Request Details
+                </h2>
+                <button
+                  onClick={closeDetailsModal}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Pet Information */}
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <div className="flex items-start space-x-4 mb-4">
+                      <div className="flex-shrink-0">
+                        {selectedRequest.images &&
+                        selectedRequest.images.length > 0 ? (
+                          <img
+                            src={selectedRequest.images[0]}
+                            alt={`${selectedRequest.petName}`}
+                            className="w-16 h-16 rounded-full object-cover border-2 border-gray-300 shadow-sm"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-400 shadow-sm">
+                            <svg
+                              className="w-8 h-8 text-gray-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-700 mb-2">
+                          Pet Information
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <p>
+                        <span className="font-semibold">Name:</span>{" "}
+                        {selectedRequest.petName}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Type:</span>{" "}
+                        {selectedRequest.petType}
+                      </p>
+                      {selectedRequest.petBreed && (
+                        <p>
+                          <span className="font-semibold">Breed:</span>{" "}
+                          {selectedRequest.petBreed}
+                        </p>
+                      )}
+                      {selectedRequest.petAge && (
+                        <p>
+                          <span className="font-semibold">Age:</span>{" "}
+                          {selectedRequest.petAge}
+                        </p>
+                      )}
+                      {selectedRequest.petGender && (
+                        <p>
+                          <span className="font-semibold">Gender:</span>{" "}
+                          {selectedRequest.petGender}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <h3 className="text-lg font-bold text-gray-700 mb-2">
+                      Request Information
+                    </h3>
+                    <div className="space-y-2">
+                      <p>
+                        <span className="font-semibold">Type:</span>{" "}
+                        {selectedRequest.requestType}
+                      </p>
+                      <p>
+                        <span className="font-semibold">Status:</span>{" "}
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full font-bold ${
+                            selectedRequest.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : selectedRequest.status === "accepted"
+                                ? "bg-blue-100 text-blue-800"
+                                : selectedRequest.status === "completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : selectedRequest.status === "cancelled"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {selectedRequest.status.charAt(0).toUpperCase() +
+                            selectedRequest.status.slice(1)}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="font-semibold">Created:</span>{" "}
+                        {new Date(
+                          selectedRequest.createdAt
+                        ).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div className="bg-gray-50 p-4 rounded-2xl">
+                  <h3 className="text-lg font-bold text-gray-700 mb-2">
+                    Description
+                  </h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    {selectedRequest.description}
+                  </p>
+                </div>
+
+                {/* Owner Information */}
+                <div className="bg-gray-50 p-4 rounded-2xl">
+                  <h3 className="text-lg font-bold text-gray-700 mb-2">
+                    Owner Information
+                  </h3>
+                  <div className="space-y-2">
+                    <p>
+                      <span className="font-semibold">Name:</span>{" "}
+                      {selectedRequest.userId?.name || "Unknown"}
+                    </p>
+                    {selectedRequest.userId?.email && (
+                      <p>
+                        <span className="font-semibold">Email:</span>{" "}
+                        {selectedRequest.userId.email}
+                      </p>
+                    )}
+                    {selectedRequest.contactPhone && (
+                      <p>
+                        <span className="font-semibold">Phone:</span>{" "}
+                        {selectedRequest.contactPhone}
+                      </p>
+                    )}
+                    {selectedRequest.contactEmail && (
+                      <p>
+                        <span className="font-semibold">Contact Email:</span>{" "}
+                        {selectedRequest.contactEmail}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pet Images */}
+                {selectedRequest.images &&
+                  selectedRequest.images.length > 1 && (
+                    <div className="bg-gray-50 p-4 rounded-2xl">
+                      <h3 className="text-lg font-bold text-gray-700 mb-2">
+                        Pet Images
+                      </h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {selectedRequest.images.map((image, index) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`${selectedRequest.petName} ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-gray-300 shadow-sm hover:shadow-md transition-shadow duration-200"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                {/* Assigned Vet Information */}
+                {selectedRequest.vetId && (
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <h3 className="text-lg font-bold text-gray-700 mb-2">
+                      Assigned Vet
+                    </h3>
+                    <div className="space-y-2">
+                      <p>
+                        <span className="font-semibold">Name:</span>{" "}
+                        {selectedRequest.vetId.name}
+                      </p>
+                      {selectedRequest.vetId.email && (
+                        <p>
+                          <span className="font-semibold">Email:</span>{" "}
+                          {selectedRequest.vetId.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                <button
+                  onClick={closeDetailsModal}
+                  className="px-6 py-3 text-gray-700 bg-gray-100 rounded-2xl font-bold hover:bg-gray-200 transition-colors duration-300"
+                >
+                  Close
+                </button>
+
+                {/* Action buttons based on status */}
+                {selectedRequest.status === "pending" && (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleAcceptRequest(selectedRequest._id);
+                        closeDetailsModal();
+                      }}
+                      className="px-6 py-3 text-white bg-green-500 rounded-2xl font-bold hover:bg-green-600 transition-colors duration-300"
+                    >
+                      Accept Request
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleRejectRequest(selectedRequest._id);
+                        closeDetailsModal();
+                      }}
+                      className="px-6 py-3 text-white bg-red-500 rounded-2xl font-bold hover:bg-red-600 transition-colors duration-300"
+                    >
+                      Reject Request
+                    </button>
+                  </>
+                )}
+
+                {selectedRequest.status === "accepted" && (
+                  <button
+                    onClick={() => {
+                      handleCompleteRequest(selectedRequest._id);
+                      closeDetailsModal();
+                    }}
+                    className="px-6 py-3 text-white bg-blue-500 rounded-2xl font-bold hover:bg-blue-600 transition-colors duration-300"
+                  >
+                    Mark Complete
+                  </button>
+                )}
+
+                {(selectedRequest.status === "completed" ||
+                  selectedRequest.status === "cancelled") && (
+                  <button
+                    onClick={() => {
+                      handleDeleteRequest(selectedRequest._id);
+                      closeDetailsModal();
+                    }}
+                    className="px-6 py-3 text-white bg-gray-500 rounded-2xl font-bold hover:bg-gray-600 transition-colors duration-300"
+                  >
+                    Delete Request
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

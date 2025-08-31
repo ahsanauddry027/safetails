@@ -36,7 +36,7 @@ export default async function handler(
 
       try {
         const stats = await VetRequestController.getVetRequestStats(user._id);
-        const requests = await VetRequestController.getVetAssignedRequests(user._id);
+        const requests = await VetRequestController.getVetDashboardRequests(user._id);
 
         return res.status(200).json({ stats, requests });
       } catch (error) {

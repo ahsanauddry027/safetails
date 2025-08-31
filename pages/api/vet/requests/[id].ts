@@ -65,6 +65,13 @@ export default async function handler(
         );
         return res.status(200).json({ success: true, data: updatedRequest });
 
+      case "DELETE":
+        // Delete request (only for completed or cancelled requests)
+        await VetRequestController.deleteRequest(requestId);
+        return res
+          .status(200)
+          .json({ success: true, message: "Request deleted successfully" });
+
       default:
         return res.status(405).json({ error: "Method not allowed" });
     }

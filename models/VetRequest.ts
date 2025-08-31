@@ -3,78 +3,91 @@ import mongoose from "mongoose";
 
 const VetRequestSchema = new mongoose.Schema(
   {
-    userId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User", 
-      required: true 
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
-    vetId: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "User" 
+    vetId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
-    petName: { 
-      type: String, 
-      required: true 
+    petName: {
+      type: String,
+      required: true,
     },
-    petType: { 
-      type: String, 
-      required: true 
+    petType: {
+      type: String,
+      required: true,
     },
-    petBreed: { 
-      type: String 
+    petBreed: {
+      type: String,
     },
-    petAge: { 
-      type: String 
+    petAge: {
+      type: String,
     },
-    requestType: { 
-      type: String, 
-      enum: ["checkup", "emergency", "vaccination", "surgery", "consultation", "other"], 
-      required: true 
+    requestType: {
+      type: String,
+      enum: [
+        "checkup",
+        "emergency",
+        "vaccination",
+        "surgery",
+        "consultation",
+        "other",
+      ],
+      required: true,
     },
-    description: { 
-      type: String, 
-      required: true 
+    description: {
+      type: String,
+      required: true,
     },
-    status: { 
-      type: String, 
-      enum: ["pending", "accepted", "completed", "cancelled"], 
-      default: "pending" 
+    images: [
+      {
+        type: String,
+      },
+    ],
+    status: {
+      type: String,
+      enum: ["pending", "accepted", "completed", "cancelled"],
+      default: "pending",
     },
-    appointmentDate: { 
-      type: Date 
+    appointmentDate: {
+      type: Date,
     },
-    notes: { 
-      type: String 
+    notes: {
+      type: String,
     },
-    isEmergency: { 
-      type: Boolean, 
-      default: false 
+    isEmergency: {
+      type: Boolean,
+      default: false,
     },
     contactPhone: {
-      type: String
+      type: String,
     },
     contactEmail: {
-      type: String
+      type: String,
     },
     petGender: {
       type: String,
       enum: ["male", "female", "unknown"],
-      default: "unknown"
+      default: "unknown",
     },
     location: {
       coordinates: {
         type: [Number], // [lng, lat]
-        required: false
+        required: false,
       },
       address: {
-        type: String
+        type: String,
       },
       description: {
-        type: String
-      }
-    }
+        type: String,
+      },
+    },
   },
   { timestamps: true }
 );
 
-export default mongoose.models.VetRequest || mongoose.model("VetRequest", VetRequestSchema);
+export default mongoose.models.VetRequest ||
+  mongoose.model("VetRequest", VetRequestSchema);
