@@ -1,11 +1,9 @@
 // utils/emailService-sendgrid.ts
 // Alternative implementation using SendGrid
-// To use this, run: npm install @sendgrid/mail
-// Then replace the import in your API files
+// To use this, install the dependency in your project:
+//   npm install @sendgrid/mail
 
-import sgMail from '@sendgrid/mail';
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+// SendGrid is loaded dynamically at send time to avoid build-time dependency issues.
 
 export interface EmailTemplate {
   subject: string;
@@ -23,22 +21,28 @@ export class EmailService {
   private static async sendEmail(to: string, template: EmailTemplate) {
     try {
       if (!process.env.SENDGRID_API_KEY) {
-        throw new Error('SENDGRID_API_KEY is not configured');
+        throw new Error("SENDGRID_API_KEY is not configured");
       }
+
+      // Dynamically import @sendgrid/mail only when sending
+      const { default: sendgrid } = await import("@sendgrid/mail");
+      sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
 
       const msg = {
         to,
-        from: process.env.FROM_EMAIL || 'SafeTails <noreply@yourdomain.com>',
+        from: process.env.FROM_EMAIL || "SafeTails <noreply@yourdomain.com>",
         subject: template.subject,
         text: template.text,
         html: template.html,
       };
 
-      const response = await sgMail.send(msg);
-      console.log('Email sent successfully:', response[0].statusCode);
-      return { success: true, messageId: response[0].headers['x-message-id'] };
+      const response = await sendgrid.send(
+        msg as unknown as Parameters<typeof sendgrid.send>[0]
+      );
+      console.log("Email sent successfully:", response[0].statusCode);
+      return { success: true, messageId: response[0].headers["x-message-id"] };
     } catch (error) {
-      console.error('SendGrid error:', error);
+      console.error("SendGrid error:", error);
       throw error;
     }
   }
@@ -46,7 +50,7 @@ export class EmailService {
   // Send OTP email for email verification
   static async sendOTPEmail(email: string, otp: string, name: string) {
     const template: EmailTemplate = {
-      subject: '🐾 SafeTails - Verify Your Email Address',
+      subject: "🐾 SafeTails - Verify Your Email Address",
       html: `
         <!DOCTYPE html>
         <html>
@@ -90,7 +94,7 @@ export class EmailService {
         </body>
         </html>
       `,
-      text: `Welcome to SafeTails, ${name}! Your email verification code is: ${otp}. This code will expire in 10 minutes. Never share this code with anyone.`
+      text: `Welcome to SafeTails, ${name}! Your email verification code is: ${otp}. This code will expire in 10 minutes. Never share this code with anyone.`,
     };
 
     return await this.sendEmail(email, template);
@@ -99,7 +103,7 @@ export class EmailService {
   // Send welcome email after successful registration
   static async sendWelcomeEmail(email: string, name: string) {
     const template: EmailTemplate = {
-      subject: '🎉 Welcome to SafeTails - Your Pet Care Journey Begins!',
+      subject: "🎉 Welcome to SafeTails - Your Pet Care Journey Begins!",
       html: `
         <!DOCTYPE html>
         <html>
@@ -131,7 +135,7 @@ export class EmailService {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold;">Start Exploring 🐕</a>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; display: inline-block; font-weight: bold;">Start Exploring 🐕</a>
             </div>
             
             <div style="background: #fff3cd; border: 1px solid #856404; border-radius: 4px; padding: 15px; margin: 20px 0;">
@@ -152,18 +156,22 @@ export class EmailService {
         </body>
         </html>
       `,
-      text: `Welcome to SafeTails, ${name}! Your account has been successfully created. Start exploring our pet care community at ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard`
+      text: `Welcome to SafeTails, ${name}! Your account has been successfully created. Start exploring our pet care community at ${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard`,
     };
 
     return await this.sendEmail(email, template);
   }
 
   // Send password reset email
-  static async sendPasswordResetEmail(email: string, name: string, resetToken: string) {
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
-    
+  static async sendPasswordResetEmail(
+    email: string,
+    name: string,
+    resetToken: string
+  ) {
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/reset-password?token=${resetToken}`;
+
     const template: EmailTemplate = {
-      subject: '🔐 SafeTails - Password Reset Request',
+      subject: "🔐 SafeTails - Password Reset Request",
       html: `
         <!DOCTYPE html>
         <html>
@@ -204,14 +212,19 @@ export class EmailService {
         </body>
         </html>
       `,
-      text: `Hello ${name}, we received a request to reset your SafeTails password. Click this link to reset: ${resetUrl}. This link expires in 1 hour.`
+      text: `Hello ${name}, we received a request to reset your SafeTails password. Click this link to reset: ${resetUrl}. This link expires in 1 hour.`,
     };
 
     return await this.sendEmail(email, template);
   }
 
   // Send general notification email
-  static async sendNotificationEmail(email: string, name: string, subject: string, message: string) {
+  static async sendNotificationEmail(
+    email: string,
+    name: string,
+    subject: string,
+    message: string
+  ) {
     const template: EmailTemplate = {
       subject: `🐾 SafeTails - ${subject}`,
       html: `
@@ -245,7 +258,7 @@ export class EmailService {
         </body>
         </html>
       `,
-      text: `Hello ${name}, ${subject}: ${message}`
+      text: `Hello ${name}, ${subject}: ${message}`,
     };
 
     return await this.sendEmail(email, template);

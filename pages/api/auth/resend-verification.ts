@@ -35,6 +35,6 @@ export default async function handler(
     console.error("Resend verification error:", error);
     res
       .status(400)
-      .json({ error: error.message || "Failed to resend verification email" });
+      .json({ error: errorMessage || "Failed to resend verification email" });
   }
 }

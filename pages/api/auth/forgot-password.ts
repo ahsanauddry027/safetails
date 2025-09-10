@@ -41,7 +41,7 @@ export default async function handler(
     console.error("Forgot password error:", error);
 
     // For security, always return success message even if user doesn't exist
-    if (error.message === "User not found") {
+    if (errorMessage === "User not found") {
       res.status(200).json({
         success: true,
         message:

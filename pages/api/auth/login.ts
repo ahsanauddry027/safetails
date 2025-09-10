@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
 import { UserController } from "@/controllers/UserController";
+import User from "@/models/User";
 import { signToken, setTokenCookie } from "@/utils/auth";
 
 // Helper function to get user-friendly error messages
@@ -31,7 +32,44 @@ export default async function handler(
   try {
     await dbConnect();
 
-    // Use controller service method to authenticate user
+    // Pre-check user status to provide clearer messaging without throwing
+    const preUser = await User.findOne({ email })
+      .populate("blockedBy", "name email")
+      .select(
+        "name email role isActive isBlocked blockedBy blockReason password"
+      );
+
+    if (!preUser) {
+      return res.status(404).json({
+        error: "User not found",
+        message:
+          "No account found with this email address. Please check your email or register for a new account.",
+      });
+    }
+
+    if (!preUser.isActive) {
+      return res.status(403).json({
+        error: "Account is inactive",
+        message:
+          "Your account has been deactivated by an administrator. Please contact support for assistance.",
+      });
+    }
+
+    if (preUser.isBlocked) {
+      const blocker =
+        (preUser.blockedBy as unknown as { name?: string; email?: string }) ||
+        {};
+      const who = blocker.name || blocker.email || "an administrator";
+      const reason = preUser.blockReason
+        ? ` Reason: ${preUser.blockReason}.`
+        : "";
+      return res.status(403).json({
+        error: "Account is blocked",
+        message: `Your account has been blocked by ${who}.${reason}`.trim(),
+      });
+    }
+
+    // Use controller service method to authenticate user (includes password check)
     const user = await UserController.authenticateUserService(email, password);
 
     const token = signToken({

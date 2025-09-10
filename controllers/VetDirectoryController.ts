@@ -1,10 +1,72 @@
 // controllers/VetDirectoryController.ts
 import VetDirectory from "@/models/VetDirectory";
-import { NextApiRequest } from "next";
+import { FilterQuery, UpdateQuery } from "mongoose";
+
+type OperatingHoursDay = { open?: string; close?: string };
+type OperatingHours = {
+  monday?: OperatingHoursDay;
+  tuesday?: OperatingHoursDay;
+  wednesday?: OperatingHoursDay;
+  thursday?: OperatingHoursDay;
+  friday?: OperatingHoursDay;
+  saturday?: OperatingHoursDay;
+  sunday?: OperatingHoursDay;
+};
+
+type Location = {
+  type?: string;
+  coordinates: [number, number];
+  address: string;
+  city: string;
+  state: string;
+  zipCode?: string;
+};
+
+type ContactInfo = {
+  phone: string;
+  email?: string;
+  website?: string;
+  emergencyPhone?: string;
+};
+
+export type VetDirectoryCreate = {
+  vetId: string;
+  clinicName: string;
+  specialization?: string[];
+  services?: string[];
+  location: Location;
+  contactInfo: ContactInfo;
+  operatingHours?: OperatingHours;
+  isEmergencyAvailable?: boolean;
+  is24Hours?: boolean;
+  rating?: number;
+  totalReviews?: number;
+  isVerified?: boolean;
+  isActive?: boolean;
+};
+
+export type VetDirectoryUpdate = Partial<VetDirectoryCreate>;
+
+export type VetDirectoryFilters = {
+  specialization?: string[];
+  isEmergencyAvailable?: boolean;
+  is24Hours?: boolean;
+  city?: string;
+  state?: string;
+};
+
+type VetDirectoryDoc = {
+  isActive: boolean;
+  specialization?: string[];
+  isEmergencyAvailable?: boolean;
+  is24Hours?: boolean;
+  rating?: number;
+  location?: { city?: string; state?: string; coordinates?: [number, number] };
+};
 
 export class VetDirectoryController {
   // Create a new vet directory entry
-  static async createVetEntry(vetData: any) {
+  static async createVetEntry(vetData: VetDirectoryCreate) {
     try {
       const vetEntry = new VetDirectory(vetData);
       await vetEntry.save();
@@ -15,13 +77,15 @@ export class VetDirectoryController {
   }
 
   // Get all vet directory entries
-  static async getAllVets(filters: any = {}) {
+  static async getAllVets(filters: VetDirectoryFilters = {}) {
     try {
-      const query: any = { isActive: true };
-      
+      const query: FilterQuery<VetDirectoryDoc> = { isActive: true };
+
       // Apply filters
       if (filters.specialization) {
-        query.specialization = { $in: filters.specialization };
+        (query as unknown as Record<string, unknown>).specialization = {
+          $in: filters.specialization,
+        };
       }
       if (filters.isEmergencyAvailable !== undefined) {
         query.isEmergencyAvailable = filters.isEmergencyAvailable;
@@ -30,10 +94,16 @@ export class VetDirectoryController {
         query.is24Hours = filters.is24Hours;
       }
       if (filters.city) {
-        query["location.city"] = { $regex: filters.city, $options: "i" };
+        (query as unknown as Record<string, unknown>)["location.city"] = {
+          $regex: filters.city,
+          $options: "i",
+        };
       }
       if (filters.state) {
-        query["location.state"] = { $regex: filters.state, $options: "i" };
+        (query as unknown as Record<string, unknown>)["location.state"] = {
+          $regex: filters.state,
+          $options: "i",
+        };
       }
 
       const vets = await VetDirectory.find(query)
@@ -64,25 +134,26 @@ export class VetDirectoryController {
     longitude: number,
     latitude: number,
     maxDistance: number = 50000, // Default 50km
-    filters: any = {}
+    filters: VetDirectoryFilters = {}
   ) {
     try {
-      const query: any = {
+      const query: FilterQuery<VetDirectoryDoc> = {
         isActive: true,
-        "location.coordinates": {
-          $near: {
-            $geometry: {
-              type: "Point",
-              coordinates: [longitude, latitude],
+        ...({
+          ["location.coordinates"]: {
+            $near: {
+              $geometry: { type: "Point", coordinates: [longitude, latitude] },
+              $maxDistance: maxDistance,
             },
-            $maxDistance: maxDistance,
           },
-        },
+        } as Record<string, unknown>),
       };
 
       // Apply additional filters
       if (filters.specialization) {
-        query.specialization = { $in: filters.specialization };
+        (query as unknown as Record<string, unknown>).specialization = {
+          $in: filters.specialization,
+        };
       }
       if (filters.isEmergencyAvailable !== undefined) {
         query.isEmergencyAvailable = filters.isEmergencyAvailable;
@@ -103,16 +174,21 @@ export class VetDirectoryController {
   }
 
   // Search vets by text
-  static async searchVets(searchTerm: string, filters: any = {}) {
+  static async searchVets(
+    searchTerm: string,
+    filters: VetDirectoryFilters = {}
+  ) {
     try {
-      const query: any = {
+      const query: FilterQuery<VetDirectoryDoc> = {
         isActive: true,
         $text: { $search: searchTerm },
-      };
+      } as unknown as FilterQuery<VetDirectoryDoc>;
 
       // Apply filters
       if (filters.specialization) {
-        query.specialization = { $in: filters.specialization };
+        (query as unknown as Record<string, unknown>).specialization = {
+          $in: filters.specialization,
+        };
       }
       if (filters.isEmergencyAvailable !== undefined) {
         query.isEmergencyAvailable = filters.isEmergencyAvailable;
@@ -133,14 +209,14 @@ export class VetDirectoryController {
   }
 
   // Update vet directory entry
-  static async updateVetEntry(vetId: string, updateData: any) {
+  static async updateVetEntry(vetId: string, updateData: VetDirectoryUpdate) {
     try {
       const vet = await VetDirectory.findByIdAndUpdate(
         vetId,
-        updateData,
+        updateData as UpdateQuery<VetDirectoryUpdate>,
         { new: true, runValidators: true }
       ).populate("vetId", "name email phone");
-      
+
       return vet;
     } catch (error) {
       throw new Error(`Failed to update vet directory entry: ${error}`);
@@ -158,14 +234,19 @@ export class VetDirectoryController {
   }
 
   // Get emergency vets only
-  static async getEmergencyVets(location?: { longitude: number; latitude: number }) {
+  static async getEmergencyVets(location?: {
+    longitude: number;
+    latitude: number;
+  }) {
     try {
-      let query: any = {
+      const query: FilterQuery<VetDirectoryDoc> = {
         isActive: true,
         isEmergencyAvailable: true,
       };
 
-      let vets;
+      let vets:
+        | Awaited<ReturnType<typeof VetDirectory.find>>
+        | Awaited<ReturnType<typeof VetDirectoryController.findNearbyVets>>;
       if (location) {
         // Find emergency vets near the location
         vets = await this.findNearbyVets(
@@ -205,13 +286,15 @@ export class VetDirectoryController {
         },
       ]);
 
-      return stats[0] || {
-        totalVets: 0,
-        emergencyVets: 0,
-        twentyFourHourVets: 0,
-        verifiedVets: 0,
-        avgRating: 0,
-      };
+      return (
+        stats[0] || {
+          totalVets: 0,
+          emergencyVets: 0,
+          twentyFourHourVets: 0,
+          verifiedVets: 0,
+          avgRating: 0,
+        }
+      );
     } catch (error) {
       throw new Error(`Failed to fetch vet statistics: ${error}`);
     }

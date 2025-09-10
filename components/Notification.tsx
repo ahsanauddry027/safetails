@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 
 interface NotificationProps {
   message: string;
-  type: "success" | "error";
+  type: "success" | "error" | "info";
   isVisible: boolean;
   onClose: () => void;
   duration?: number;
@@ -14,7 +14,7 @@ const Notification: React.FC<NotificationProps> = ({
   type,
   isVisible,
   onClose,
-  duration = 5000,
+  duration = 30000,
 }) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -36,7 +36,9 @@ const Notification: React.FC<NotificationProps> = ({
   const typeClasses =
     type === "success"
       ? "bg-green-500 text-white border-l-4 border-green-600"
-      : "bg-red-500 text-white border-l-4 border-red-600";
+      : type === "error"
+        ? "bg-red-500 text-white border-l-4 border-red-600"
+        : "bg-blue-500 text-white border-l-4 border-blue-600";
 
   const icon =
     type === "success" ? (
@@ -47,13 +49,17 @@ const Notification: React.FC<NotificationProps> = ({
           clipRule="evenodd"
         />
       </svg>
-    ) : (
+    ) : type === "error" ? (
       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
         <path
           fillRule="evenodd"
           d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
           clipRule="evenodd"
         />
+      </svg>
+    ) : (
+      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M18 10A8 8 0 11.001 10 8 8 0 0118 10zM9 9h2v6H9V9zm0-4h2v2H9V5z" />
       </svg>
     );
 

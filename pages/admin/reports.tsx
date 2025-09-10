@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import axios from "axios";
@@ -51,28 +51,34 @@ const AdminReports = () => {
   }, [user, loading, router]);
 
   // Fetch reports
-  useEffect(() => {
-    if (user && user.role === "admin") {
-      fetchReports();
-    }
-  }, [currentPage, statusFilter, user]);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setLoadingReports(true);
-      const response = await axios.get(`/api/reports?status=${statusFilter}&page=${currentPage}&limit=10`);
-      
+      const response = await axios.get(
+        `/api/reports?status=${statusFilter}&page=${currentPage}&limit=10`
+      );
+
       if (response.data.success) {
         setReports(response.data.data);
         setTotalPages(response.data.pagination.totalPages);
         setTotal(response.data.pagination.total);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch reports");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Failed to fetch reports");
+      } else {
+        setError("Failed to fetch reports");
+      }
     } finally {
       setLoadingReports(false);
     }
-  };
+  }, [currentPage, statusFilter]);
+
+  useEffect(() => {
+    if (user && user.role === "admin") {
+      fetchReports();
+    }
+  }, [fetchReports, user]);
 
   const handleStatusUpdate = async () => {
     if (!selectedReport || !actionStatus) return;
@@ -80,22 +86,34 @@ const AdminReports = () => {
     try {
       await axios.put(`/api/reports?id=${selectedReport._id}`, {
         status: actionStatus,
-        adminNotes: adminNotes || undefined
+        adminNotes: adminNotes || undefined,
       });
 
       // Update local state
-      setReports(prev => prev.map(report => 
-        report._id === selectedReport._id 
-          ? { ...report, status: actionStatus, adminNotes, reviewedBy: user, reviewedAt: new Date().toISOString() }
-          : report
-      ));
+      setReports((prev) =>
+        prev.map((report) => {
+          if (report._id !== selectedReport._id) return report;
+          const reviewer = user ? { _id: user.id, name: user.name } : undefined;
+          return {
+            ...report,
+            status: actionStatus,
+            adminNotes,
+            reviewedBy: reviewer,
+            reviewedAt: new Date().toISOString(),
+          };
+        })
+      );
 
       setShowActionModal(false);
       setSelectedReport(null);
       setActionStatus("");
       setAdminNotes("");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to update report");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || "Failed to update report");
+      } else {
+        setError("Failed to update report");
+      }
     }
   };
 
@@ -137,7 +155,7 @@ const AdminReports = () => {
       month: "short",
       day: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -167,32 +185,38 @@ const AdminReports = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-black mb-2">Content Review</h1>
-            <p className="text-gray-600 text-lg">Review and manage reported posts</p>
+            <h1 className="text-4xl font-bold text-black mb-2">
+              Content Review
+            </h1>
+            <p className="text-gray-600 text-lg">
+              Review and manage reported posts
+            </p>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-sm border p-6">
-              <h3 className="text-lg font-semibold text-gray-900">Total Reports</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Total Reports
+              </h3>
               <p className="text-3xl font-bold text-black">{total}</p>
             </div>
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-semibold text-gray-900">Pending</h3>
               <p className="text-3xl font-bold text-yellow-600">
-                {reports.filter(r => r.status === "pending").length}
+                {reports.filter((r) => r.status === "pending").length}
               </p>
             </div>
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-semibold text-gray-900">Reviewed</h3>
               <p className="text-3xl font-bold text-blue-600">
-                {reports.filter(r => r.status === "reviewed").length}
+                {reports.filter((r) => r.status === "reviewed").length}
               </p>
             </div>
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-semibold text-gray-900">Resolved</h3>
               <p className="text-3xl font-bold text-green-600">
-                {reports.filter(r => r.status === "resolved").length}
+                {reports.filter((r) => r.status === "resolved").length}
               </p>
             </div>
           </div>
@@ -200,7 +224,9 @@ const AdminReports = () => {
           {/* Filters */}
           <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
             <div className="flex items-center space-x-4">
-              <label className="text-sm font-medium text-gray-700">Status Filter:</label>
+              <label className="text-sm font-medium text-gray-700">
+                Status Filter:
+              </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -233,7 +259,9 @@ const AdminReports = () => {
               </div>
             ) : reports.length === 0 ? (
               <div className="p-8 text-center">
-                <p className="text-gray-500">No reports found for the selected status.</p>
+                <p className="text-gray-500">
+                  No reports found for the selected status.
+                </p>
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
@@ -242,67 +270,91 @@ const AdminReports = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(report.status)}`}>
-                            {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+                          <span
+                            className={`px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(report.status)}`}
+                          >
+                            {report.status.charAt(0).toUpperCase() +
+                              report.status.slice(1)}
                           </span>
                           <span className="px-2 py-1 text-xs font-semibold rounded-full border bg-gray-100 text-gray-800">
                             {getReasonLabel(report.reason)}
                           </span>
                         </div>
-                        
+
                         <h3 className="text-lg font-semibold text-black mb-2">
                           Reported Post: {report.postId.title}
                         </h3>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           <div>
-                            <p className="text-sm text-gray-600 mb-1">Reported by:</p>
-                            <p className="text-black font-medium">{report.reportedBy.name}</p>
-                            <p className="text-sm text-gray-500">{report.reportedBy.email}</p>
+                            <p className="text-sm text-gray-600 mb-1">
+                              Reported by:
+                            </p>
+                            <p className="text-black font-medium">
+                              {report.reportedBy.name}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {report.reportedBy.email}
+                            </p>
                           </div>
                           <div>
-                            <p className="text-sm text-gray-600 mb-1">Reported on:</p>
-                            <p className="text-black">{formatDate(report.createdAt)}</p>
+                            <p className="text-sm text-gray-600 mb-1">
+                              Reported on:
+                            </p>
+                            <p className="text-black">
+                              {formatDate(report.createdAt)}
+                            </p>
                           </div>
                         </div>
-                        
+
                         <div className="mb-4">
-                          <p className="text-sm text-gray-600 mb-1">Description:</p>
+                          <p className="text-sm text-gray-600 mb-1">
+                            Description:
+                          </p>
                           <p className="text-black">{report.description}</p>
                         </div>
-                        
+
                         {report.adminNotes && (
                           <div className="mb-4">
-                            <p className="text-sm text-gray-600 mb-1">Admin Notes:</p>
+                            <p className="text-sm text-gray-600 mb-1">
+                              Admin Notes:
+                            </p>
                             <p className="text-black">{report.adminNotes}</p>
                           </div>
                         )}
-                        
+
                         {report.reviewedBy && (
                           <div className="text-sm text-gray-500">
-                            Reviewed by {report.reviewedBy.name} on {formatDate(report.reviewedAt!)}
+                            Reviewed by {report.reviewedBy.name} on{" "}
+                            {formatDate(report.reviewedAt!)}
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="ml-6 flex flex-col space-y-2">
                         <button
                           onClick={() => {
                             setSelectedReport(report);
                             setShowActionModal(true);
                           }}
-                          className="px-4 py-2 bg-black text-white rounded-md text-sm font-medium"
+                          className="group relative inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-black border-2 border-black rounded-lg transition-all duration-200 hover:bg-gray-900 hover:border-gray-900 hover:scale-105 transform hover:shadow-md"
                         >
+                          <svg
+                            className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 6v6l4 2"
+                            />
+                          </svg>
                           Take Action
                         </button>
-                        <a
-                          href={`/posts/${report.postId._id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-gray-200 text-black rounded-md text-sm font-medium text-center"
-                        >
-                          View Post
-                        </a>
+                        {/* View Post button removed as requested */}
                       </div>
                     </div>
                   </div>
@@ -320,34 +372,36 @@ const AdminReports = () => {
                   disabled={currentPage === 1}
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     currentPage === 1
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-white text-gray-700 border border-gray-300'
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-white text-gray-700 border border-gray-300"
                   }`}
                 >
                   Previous
                 </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-2 rounded-md text-sm font-medium ${
-                      currentPage === page
-                        ? 'bg-black text-white'
-                        : 'bg-white text-gray-700 border border-gray-300'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-2 rounded-md text-sm font-medium ${
+                        currentPage === page
+                          ? "bg-black text-white"
+                          : "bg-white text-gray-700 border border-gray-300"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
+
                 <button
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   className={`px-3 py-2 rounded-md text-sm font-medium ${
                     currentPage === totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-white text-gray-700 border border-gray-300'
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-white text-gray-700 border border-gray-300"
                   }`}
                 >
                   Next
@@ -364,7 +418,9 @@ const AdminReports = () => {
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-semibold text-black">Take Action on Report</h3>
+                <h3 className="text-2xl font-semibold text-black">
+                  Take Action on Report
+                </h3>
                 <button
                   onClick={() => setShowActionModal(false)}
                   className="text-gray-500 text-2xl font-bold"

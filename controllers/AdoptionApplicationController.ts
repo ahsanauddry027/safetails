@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import AdoptionApplication from "@/models/AdoptionApplication";
+import AdoptionApplication, {
+  IAdoptionApplication,
+} from "@/models/AdoptionApplication";
 import Adoption from "@/models/Adoption";
 import User from "@/models/User";
 import { verifyToken } from "@/utils/auth";
@@ -28,6 +30,7 @@ export default async function handler(
           .json({ message: `Method ${method} Not Allowed` });
     }
   } catch (error) {
+    console.error("AdoptionApplication handler error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -54,7 +57,7 @@ async function getAdoptionApplications(
     const skip = (pageNum - 1) * limitNum;
 
     // Build filter object
-    const filter: any = {};
+    const filter: import("mongoose").FilterQuery<IAdoptionApplication> = {};
 
     if (adoptionId) filter.adoptionId = adoptionId;
     if (applicantId) filter.applicantId = applicantId;
@@ -86,6 +89,7 @@ async function getAdoptionApplications(
       },
     });
   } catch (error) {
+    console.error("Error fetching adoption applications:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -105,10 +109,16 @@ async function createAdoptionApplication(
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const decoded = await verifyToken(token);
-    if (!decoded) {
+    const decodedRaw = await verifyToken(token);
+    if (
+      !decodedRaw ||
+      typeof decodedRaw !== "object" ||
+      !("userId" in decodedRaw) ||
+      typeof (decodedRaw as Record<string, unknown>).userId !== "string"
+    ) {
       return res.status(401).json({ message: "Invalid token" });
     }
+    const userId = (decodedRaw as { userId: string }).userId;
 
     const {
       adoptionId,
@@ -149,7 +159,7 @@ async function createAdoptionApplication(
     // Check if user already applied
     const existingApplication = await AdoptionApplication.findOne({
       adoptionId,
-      applicantId: decoded.userId,
+      applicantId: userId,
     });
 
     if (existingApplication) {
@@ -161,7 +171,7 @@ async function createAdoptionApplication(
     // Create adoption application
     const adoptionApplication = new AdoptionApplication({
       adoptionId,
-      applicantId: decoded.userId,
+      applicantId: userId,
       personalInfo,
       experience,
       homeEnvironment,
@@ -189,6 +199,7 @@ async function createAdoptionApplication(
       data: adoptionApplication,
     });
   } catch (error) {
+    console.error("Error creating adoption application:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -209,9 +220,10 @@ async function updateAdoptionApplication(
     }
 
     const decoded = await verifyToken(token);
-    if (!decoded) {
+    if (!decoded || typeof decoded !== "object" || !("userId" in decoded)) {
       return res.status(401).json({ message: "Invalid token" });
     }
+    const adminUserId = (decoded as { userId: string }).userId;
 
     const { applicationId } = req.query;
     const { status, adminNotes } = req.body;
@@ -221,7 +233,7 @@ async function updateAdoptionApplication(
     }
 
     // Check if user is admin
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(adminUserId).select("role");
     if (!user || user.role !== "admin") {
       return res.status(403).json({ message: "Admin access required" });
     }
@@ -232,7 +244,7 @@ async function updateAdoptionApplication(
       {
         status,
         adminNotes,
-        adminId: decoded.userId,
+        adminId: adminUserId,
         reviewedAt: new Date(),
       },
       { new: true }
@@ -250,7 +262,8 @@ async function updateAdoptionApplication(
       await Adoption.findByIdAndUpdate(updatedApplication.adoptionId, {
         status: "pending",
         adopter: {
-          userId: updatedApplication.applicantId._id,
+          userId: (updatedApplication.applicantId as unknown as { _id: string })
+            ._id,
           name: updatedApplication.personalInfo.name,
           email: updatedApplication.personalInfo.email,
           phone: updatedApplication.personalInfo.phone,
@@ -265,6 +278,7 @@ async function updateAdoptionApplication(
       data: updatedApplication,
     });
   } catch (error) {
+    console.error("Error updating adoption application:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",

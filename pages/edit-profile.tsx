@@ -1,5 +1,6 @@
 // pages/edit-profile.tsx
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import Link from "next/link";
@@ -41,7 +42,9 @@ export default function EditProfilePage() {
     }
   }, [user, loading, router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -59,14 +62,14 @@ export default function EditProfilePage() {
     } catch (error: unknown) {
       // Handle axios errors or other structured errors
       let errorMessage = "Failed to update profile";
-      
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as any;
-        errorMessage = axiosError.response?.data?.error || errorMessage;
+
+      if (axios.isAxiosError(error)) {
+        const data = error.response?.data as { error?: string } | undefined;
+        errorMessage = data?.error || errorMessage;
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       setMessage({
         type: "error",
         text: errorMessage,
@@ -194,7 +197,7 @@ export default function EditProfilePage() {
               >
                 {isSubmitting ? "Updating..." : "Update Profile"}
               </button>
-              
+
               <Link
                 href="/profile"
                 className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-3 px-4 rounded-md transition duration-200 text-center"
@@ -207,4 +210,4 @@ export default function EditProfilePage() {
       </div>
     </div>
   );
-} 
+}

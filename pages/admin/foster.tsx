@@ -208,16 +208,23 @@ const AdminFosterPage = () => {
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
                         <div className="flex space-x-3">
-                          <Link
-                            href={`/foster/${post._id}`}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            View
-                          </Link>
                           <button
                             onClick={() => handleDeletePost(post._id)}
-                            className="text-red-600 hover:text-red-900"
+                            className="group relative inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 transform hover:scale-105 hover:shadow-md active:scale-95 text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300 hover:text-red-700"
                           >
+                            <svg
+                              className="w-4 h-4 mr-2 transition-transform duration-200 group-hover:scale-110"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
                             Delete
                           </button>
                         </div>

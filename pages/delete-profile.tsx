@@ -35,7 +35,9 @@ export default function DeleteProfilePage() {
       router.push("/");
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to delete profile. Please try again.";
+        error instanceof Error
+          ? error.message
+          : "Failed to delete profile. Please try again.";
       alert("Failed to delete profile. Please try again.");
     } finally {
       setIsDeleting(false);
@@ -48,18 +50,33 @@ export default function DeleteProfilePage() {
         <div className="bg-white rounded-lg shadow-md p-8">
           <div className="text-center mb-6">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              <svg
+                className="w-8 h-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">Delete Profile</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              Delete Profile
+            </h1>
             <p className="text-gray-600">
-              This action cannot be undone. All your data will be permanently deleted.
+              This action cannot be undone. All your data will be permanently
+              deleted.
             </p>
           </div>
 
           <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-            <h3 className="font-semibold text-red-800 mb-2">What will be deleted:</h3>
+            <h3 className="font-semibold text-red-800 mb-2">
+              What will be deleted:
+            </h3>
             <ul className="text-sm text-red-700 space-y-1">
               <li>• Your personal information</li>
               <li>• Your account settings</li>
@@ -70,7 +87,7 @@ export default function DeleteProfilePage() {
 
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type "DELETE" to confirm
+              Type &apos;DELETE&apos; to confirm
             </label>
             <input
               type="text"
@@ -89,7 +106,7 @@ export default function DeleteProfilePage() {
             >
               {isDeleting ? "Deleting..." : "Delete Profile"}
             </button>
-            
+
             <Link
               href="/profile"
               className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-3 px-4 rounded-md transition duration-200 text-center"
@@ -110,4 +127,4 @@ export default function DeleteProfilePage() {
       </div>
     </div>
   );
-} 
+}

@@ -27,7 +27,8 @@ export default async function handler(
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    const { userId, name, email, role, phone, address, bio } = req.body;
+    const { userId, name, email, role, phone, address, bio, isActive } =
+      req.body;
 
     if (!userId) {
       return res.status(400).json({ error: "User ID is required" });
@@ -39,8 +40,8 @@ export default async function handler(
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Prevent admin from changing other admin roles
-    if (targetUser.role === "admin" && role !== "admin") {
+    // Prevent admin from changing other admin roles (only when role is provided)
+    if (targetUser.role === "admin" && role && role !== "admin") {
       return res
         .status(403)
         .json({ error: "Cannot change administrator roles" });
@@ -65,6 +66,7 @@ export default async function handler(
       phone,
       address,
       bio,
+      ...(typeof isActive === "boolean" ? { isActive } : {}),
     });
 
     res.status(200).json({

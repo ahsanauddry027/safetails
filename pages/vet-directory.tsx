@@ -43,11 +43,13 @@ interface VetDirectoryEntry {
   rating: number;
   totalReviews: number;
   isVerified: boolean;
-  vetId?: string | {
-    name: string;
-    email: string;
-    phone?: string;
-  };
+  vetId?:
+    | string
+    | {
+        name: string;
+        email: string;
+        phone?: string;
+      };
 }
 
 export default function VetDirectory() {
@@ -68,13 +70,15 @@ export default function VetDirectory() {
     lat: number;
     lng: number;
   } | null>(null);
-  const [selectedVet, setSelectedVet] = useState<VetDirectoryEntry | null>(null);
+  const [selectedVet, setSelectedVet] = useState<VetDirectoryEntry | null>(
+    null
+  );
   const [distance, setDistance] = useState(50); // Default 50km
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   // Helper function to safely get vet name
   const getVetName = (vet: VetDirectoryEntry) => {
-    if (typeof vet.vetId === 'object' && vet.vetId?.name) {
+    if (typeof vet.vetId === "object" && vet.vetId?.name) {
       return vet.vetId.name;
     }
     return "Unknown Vet";
@@ -108,14 +112,16 @@ export default function VetDirectory() {
 
     try {
       const params = new URLSearchParams();
-      
+
       if (searchTerm) params.append("search", searchTerm);
-      if (filters.specialization) params.append("specialization", filters.specialization);
-      if (filters.isEmergencyAvailable) params.append("isEmergencyAvailable", "true");
+      if (filters.specialization)
+        params.append("specialization", filters.specialization);
+      if (filters.isEmergencyAvailable)
+        params.append("isEmergencyAvailable", "true");
       if (filters.is24Hours) params.append("is24Hours", "true");
       if (filters.city) params.append("city", filters.city);
       if (filters.state) params.append("state", filters.state);
-      
+
       // Add location-based search if user location is available
       if (userLocation) {
         params.append("longitude", userLocation.lng.toString());
@@ -123,8 +129,10 @@ export default function VetDirectory() {
         params.append("distance", distance.toString());
       }
 
-      const response = await axios.get(`/api/vet-directory?${params.toString()}`);
-      
+      const response = await axios.get(
+        `/api/vet-directory?${params.toString()}`
+      );
+
       if (response.data.success) {
         setVets(response.data.data);
       }
@@ -136,11 +144,14 @@ export default function VetDirectory() {
     }
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+  const handleFilterChange = (
+    e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>
+  ) => {
     const { name, value, type } = e.target;
     setFilters({
       ...filters,
-      [name]: type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
+      [name]:
+        type === "checkbox" ? (e.target as HTMLInputElement).checked : value,
     });
   };
 
@@ -155,19 +166,40 @@ export default function VetDirectory() {
     setSearchTerm("");
   };
 
-  const getOperatingHours = (hours: any) => {
-    const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-    const today = days[new Date().getDay() - 1] || "monday";
+  type DayKey =
+    | "monday"
+    | "tuesday"
+    | "wednesday"
+    | "thursday"
+    | "friday"
+    | "saturday"
+    | "sunday";
+  type OperatingHoursMap = Partial<
+    Record<DayKey, { open?: string; close?: string }>
+  >;
+
+  const getOperatingHours = (hours: OperatingHoursMap) => {
+    const days = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ];
+    const todayIndex = new Date().getDay(); // 0 (Sun) - 6 (Sat)
+    const today = (days[(todayIndex + 6) % 7] as DayKey) || "monday"; // map Sun(0) -> saturday index, then +1 wrap
     const todayHours = hours[today];
-    
+
     if (!todayHours || (!todayHours.open && !todayHours.close)) {
       return "Closed today";
     }
-    
+
     if (todayHours.open && todayHours.close) {
       return `${todayHours.open} - ${todayHours.close}`;
     }
-    
+
     return "Hours vary";
   };
 
@@ -179,8 +211,8 @@ export default function VetDirectory() {
           spec === "emergency"
             ? "bg-red-100 text-red-800"
             : spec === "surgery"
-            ? "bg-blue-100 text-blue-800"
-            : "bg-gray-100 text-gray-800"
+              ? "bg-blue-100 text-blue-800"
+              : "bg-gray-100 text-gray-800"
         }`}
       >
         {spec}
@@ -195,9 +227,12 @@ export default function VetDirectory() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Emergency Vet Directory</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Emergency Vet Directory
+              </h1>
               <p className="mt-2 text-gray-600">
-                Find qualified veterinarians and emergency pet care services near you
+                Find qualified veterinarians and emergency pet care services
+                near you
               </p>
             </div>
             <div className="mt-4 md:mt-0">
@@ -207,9 +242,9 @@ export default function VetDirectory() {
               >
                 {showMap ? "Hide Map" : "Show Map"}
               </button>
-              
+
               {/* Only show create form button for vets */}
-              {user && user.role === 'vet' && (
+              {user && user.role === "vet" && (
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -228,7 +263,10 @@ export default function VetDirectory() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {/* Search */}
             <div className="lg:col-span-2">
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="search"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Search Vets
               </label>
               <input
@@ -244,7 +282,10 @@ export default function VetDirectory() {
 
             {/* Specialization Filter */}
             <div>
-              <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="specialization"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Specialization
               </label>
               <select
@@ -268,7 +309,10 @@ export default function VetDirectory() {
 
             {/* City Filter */}
             <div>
-              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="city"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 City
               </label>
               <input
@@ -294,7 +338,10 @@ export default function VetDirectory() {
                 onChange={handleFilterChange}
                 className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
-              <label htmlFor="isEmergencyAvailable" className="ml-2 block text-sm text-gray-900">
+              <label
+                htmlFor="isEmergencyAvailable"
+                className="ml-2 block text-sm text-gray-900"
+              >
                 Emergency Available
               </label>
             </div>
@@ -308,14 +355,20 @@ export default function VetDirectory() {
                 onChange={handleFilterChange}
                 className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
-              <label htmlFor="is24Hours" className="ml-2 block text-sm text-gray-900">
+              <label
+                htmlFor="is24Hours"
+                className="ml-2 block text-sm text-gray-900"
+              >
                 24 Hours
               </label>
             </div>
 
             {/* Distance Slider */}
             <div className="md:col-span-2">
-              <label htmlFor="distance" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="distance"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 Search Radius: {distance}km
               </label>
               <input
@@ -337,7 +390,7 @@ export default function VetDirectory() {
             >
               Clear Filters
             </button>
-            
+
             {userLocation && (
               <div className="text-sm text-gray-600">
                 📍 Searching near your location
@@ -349,7 +402,9 @@ export default function VetDirectory() {
         {/* Map View */}
         {showMap && userLocation && (
           <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Vet Locations</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Vet Locations
+            </h3>
             <div className="h-96 rounded-lg overflow-hidden">
               <LeafletMap
                 center={[userLocation.lat, userLocation.lng]}
@@ -357,8 +412,8 @@ export default function VetDirectory() {
                 markers={[
                   {
                     position: [userLocation.lat, userLocation.lng],
-                    popup: 'Your Location'
-                  }
+                    popup: "Your Location",
+                  },
                 ]}
                 height="384px"
               />
@@ -385,7 +440,9 @@ export default function VetDirectory() {
             </div>
           ) : vets.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-gray-500 mb-4">No veterinarians found matching your criteria.</div>
+              <div className="text-gray-500 mb-4">
+                No veterinarians found matching your criteria.
+              </div>
               <button
                 onClick={clearFilters}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
@@ -423,14 +480,16 @@ export default function VetDirectory() {
                             )}
                           </h3>
                           <p className="text-gray-600 mb-2">
-                            Dr. {getVetName(vet)} • {vet.location.city}, {vet.location.state}
+                            Dr. {getVetName(vet)} • {vet.location.city},{" "}
+                            {vet.location.state}
                           </p>
                         </div>
                         <div className="text-right">
                           <div className="flex items-center mb-1">
                             <span className="text-yellow-400">★</span>
                             <span className="ml-1 text-sm text-gray-600">
-                              {vet.rating.toFixed(1)} ({vet.totalReviews} reviews)
+                              {vet.rating.toFixed(1)} ({vet.totalReviews}{" "}
+                              reviews)
                             </span>
                           </div>
                           {vet.isEmergencyAvailable && (
@@ -450,10 +509,13 @@ export default function VetDirectory() {
                         {getSpecializationBadges(vet.specialization)}
                       </div>
 
-                      <p className="text-gray-700 mb-3">{vet.location.address}</p>
-                      
+                      <p className="text-gray-700 mb-3">
+                        {vet.location.address}
+                      </p>
+
                       <div className="text-sm text-gray-600 mb-3">
-                        <span className="font-medium">Hours:</span> {getOperatingHours(vet.operatingHours)}
+                        <span className="font-medium">Hours:</span>{" "}
+                        {getOperatingHours(vet.operatingHours)}
                       </div>
 
                       <div className="flex flex-wrap gap-2">
@@ -511,7 +573,9 @@ export default function VetDirectory() {
           <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
             <div className="mt-3">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-semibold text-gray-900">{selectedVet.clinicName}</h3>
+                <h3 className="text-2xl font-semibold text-gray-900">
+                  {selectedVet.clinicName}
+                </h3>
                 <button
                   onClick={() => setSelectedVet(null)}
                   className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
@@ -519,21 +583,38 @@ export default function VetDirectory() {
                   ×
                 </button>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Contact Information</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Contact Information
+                  </h4>
                   <div className="space-y-2">
-                    <p><span className="font-medium">Phone:</span> {selectedVet.contactInfo.phone}</p>
+                    <p>
+                      <span className="font-medium">Phone:</span>{" "}
+                      {selectedVet.contactInfo.phone}
+                    </p>
                     {selectedVet.contactInfo.emergencyPhone && (
-                      <p><span className="font-medium">Emergency:</span> {selectedVet.contactInfo.emergencyPhone}</p>
+                      <p>
+                        <span className="font-medium">Emergency:</span>{" "}
+                        {selectedVet.contactInfo.emergencyPhone}
+                      </p>
                     )}
                     {selectedVet.contactInfo.email && (
-                      <p><span className="font-medium">Email:</span> {selectedVet.contactInfo.email}</p>
+                      <p>
+                        <span className="font-medium">Email:</span>{" "}
+                        {selectedVet.contactInfo.email}
+                      </p>
                     )}
                     {selectedVet.contactInfo.website && (
-                      <p><span className="font-medium">Website:</span> 
-                        <a href={selectedVet.contactInfo.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-1">
+                      <p>
+                        <span className="font-medium">Website:</span>
+                        <a
+                          href={selectedVet.contactInfo.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline ml-1"
+                        >
                           {selectedVet.contactInfo.website}
                         </a>
                       </p>
@@ -543,34 +624,49 @@ export default function VetDirectory() {
 
                 <div>
                   <h4 className="font-medium text-gray-900 mb-2">Location</h4>
-                  <p className="text-gray-700">{selectedVet.location.address}</p>
-                  <p className="text-gray-600">{selectedVet.location.city}, {selectedVet.location.state} {selectedVet.location.zipCode}</p>
+                  <p className="text-gray-700">
+                    {selectedVet.location.address}
+                  </p>
+                  <p className="text-gray-600">
+                    {selectedVet.location.city}, {selectedVet.location.state}{" "}
+                    {selectedVet.location.zipCode}
+                  </p>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Services & Specializations</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Services & Specializations
+                  </h4>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {getSpecializationBadges(selectedVet.specialization)}
                   </div>
                   {selectedVet.services.length > 0 && (
                     <div>
                       <span className="font-medium">Services:</span>
-                      <p className="text-gray-700">{selectedVet.services.join(", ")}</p>
+                      <p className="text-gray-700">
+                        {selectedVet.services.join(", ")}
+                      </p>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Operating Hours</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Operating Hours
+                  </h4>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    {Object.entries(selectedVet.operatingHours).map(([day, hours]) => (
-                      <div key={day} className="flex justify-between">
-                        <span className="capitalize">{day}:</span>
-                        <span className="text-gray-600">
-                          {hours.open && hours.close ? `${hours.open} - ${hours.close}` : "Closed"}
-                        </span>
-                      </div>
-                    ))}
+                    {Object.entries(selectedVet.operatingHours).map(
+                      ([day, hours]) => (
+                        <div key={day} className="flex justify-between">
+                          <span className="capitalize">{day}:</span>
+                          <span className="text-gray-600">
+                            {hours.open && hours.close
+                              ? `${hours.open} - ${hours.close}`
+                              : "Closed"}
+                          </span>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
 
@@ -597,8 +693,8 @@ export default function VetDirectory() {
       )}
 
       {/* Create Vet Directory Entry Modal - Only for Vets */}
-      {showCreateForm && user && user.role === 'vet' && (
-        <CreateVetEntryModal 
+      {showCreateForm && user && user.role === "vet" && (
+        <CreateVetEntryModal
           onClose={() => setShowCreateForm(false)}
           onSuccess={() => {
             setShowCreateForm(false);

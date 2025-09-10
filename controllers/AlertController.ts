@@ -165,17 +165,12 @@ async function getAlerts(req: NextApiRequest, res: NextApiResponse) {
         console.log(
           `Searching for alerts within ${radiusNum}km of user location`
         );
-
-        // First, get all alerts within a reasonable range (slightly larger than user's search radius)
-        const searchRadius = Math.max(radiusNum, 50); // At least 50km to ensure we don't miss alerts
+        const searchRadius = Math.max(radiusNum, 50);
         const geospatialFilter = {
           ...filter,
           "location.coordinates": {
             $geoWithin: {
-              $centerSphere: [
-                [lng, lat],
-                searchRadius / 6371, // Convert km to radians (Earth radius = 6371 km)
-              ],
+              $centerSphere: [[lng, lat], searchRadius / 6371],
             },
           },
         };
@@ -194,16 +189,12 @@ async function getAlerts(req: NextApiRequest, res: NextApiResponse) {
           `Found ${allAlertsInRange.length} alerts within ${searchRadius}km radius`
         );
 
-        // Now filter alerts based on TWO criteria:
-        // 1. Actual distance from user (must be within user's search radius)
-        // 2. Alert's individual radius (must be <= user's search radius)
         const filteredAlerts = allAlertsInRange.filter((alert) => {
           const alertLng = alert.location.coordinates[0];
           const alertLat = alert.location.coordinates[1];
           const alertRadius = alert.location.radius || 10; // Default to 10km if not specified
 
-          // Calculate actual distance between user and alert location
-          const R = 6371; // Earth's radius in km
+          const R = 6371;
           const dLat = ((alertLat - lat) * Math.PI) / 180;
           const dLng = ((alertLng - lng) * Math.PI) / 180;
           const a =
@@ -215,9 +206,6 @@ async function getAlerts(req: NextApiRequest, res: NextApiResponse) {
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
           const actualDistance = R * c;
 
-          // Alert should be shown if BOTH conditions are met:
-          // 1. Alert is within the user's search radius
-          // 2. Alert's individual radius is <= user's search radius
           const withinDistance = actualDistance <= radiusNum;
           const radiusCompatible = alertRadius <= radiusNum;
           const shouldShow = withinDistance && radiusCompatible;
@@ -243,7 +231,6 @@ async function getAlerts(req: NextApiRequest, res: NextApiResponse) {
       } catch (geoError: unknown) {
         console.error("Geospatial query error:", geoError);
 
-        // Fallback to regular query without geospatial filtering
         console.log("Falling back to non-geospatial query");
         total = await Alert.countDocuments(filter);
 
@@ -354,10 +341,9 @@ async function createAlert(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ message: "Location type must be 'Point'" });
     }
 
-    // Validate coordinates are within valid ranges
     const [lng, lat] = location.coordinates;
     if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
-      console.log("Coordinates out of range:", { lng, lat }); // Debug log
+      console.log("Coordinates out of range:", { lng, lat });
       return res.status(400).json({ message: "Invalid coordinates" });
     }
 
@@ -376,9 +362,8 @@ async function createAlert(req: NextApiRequest, res: NextApiResponse) {
       urgency: urgency || "medium",
       targetAudience: targetAudience || "nearby",
       createdBy: decoded.id,
-    }); // Debug log
+    });
 
-    // Create new alert
     const alert = new Alert({
       type,
       title: title.trim(),
@@ -501,7 +486,6 @@ async function updateAlert(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Delete an alert
 async function deleteAlert(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Verify authentication

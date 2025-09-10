@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { AxiosError } from "axios";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -13,6 +12,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,15 +20,21 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(email, password);
-      router.push("/");
-    } catch (err: unknown) {
-      // Get the user-friendly message from the API response
-      const axiosError = err as AxiosError<{ message?: string }>;
-      const errorMessage =
-        axiosError.response?.data?.message ||
-        "Login failed. Please check your credentials.";
-      setError(errorMessage);
+      const result = await login(email, password);
+      if (result.success) {
+        router.push("/");
+      } else {
+        setError(
+          result.error || "Login failed. Please check your credentials."
+        );
+        // If the server indicates inactive or blocked, show modal
+        if (
+          result.error?.toLowerCase().includes("inactive") ||
+          result.error?.toLowerCase().includes("blocked")
+        ) {
+          setShowModal(true);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -142,6 +148,28 @@ export default function LoginPage() {
           </Link>
         </p>
       </form>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md border-2 border-black">
+            <h3 className="text-xl font-bold text-black mb-2">
+              Account access restricted
+            </h3>
+            <p className="text-gray-700 mb-4">
+              {error ||
+                "Your account is currently inactive or blocked by an administrator."}
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -27,7 +27,9 @@ export default function WelcomePage() {
               />
             </svg>
           </div>
-          <h2 className="text-3xl mb-4 font-bold text-gray-800">Welcome to SafeTails! 🐾</h2>
+          <h2 className="text-3xl mb-4 font-bold text-gray-800">
+            Welcome to SafeTails! 🐾
+          </h2>
         </div>
 
         <div className="space-y-4 text-gray-600">
@@ -35,12 +37,13 @@ export default function WelcomePage() {
             Congratulations! Your email has been successfully verified.
           </p>
           <p>
-            You're now part of our amazing pet care community! You should also receive a welcome email with more information.
+            You are now part of our amazing pet care community! You should also
+            receive a welcome email with more information.
           </p>
         </div>
 
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h3 className="font-semibold text-blue-800 mb-2">🚀 What's Next?</h3>
+          <h3 className="font-semibold text-blue-800 mb-2">🚀 What is Next?</h3>
           <ul className="text-sm text-blue-700 text-left space-y-1">
             <li>• Complete your profile</li>
             <li>• Share posts about your pets</li>

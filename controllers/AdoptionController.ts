@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/utils/db";
-import Adoption from "@/models/Adoption";
-import AdoptionApplication from "@/models/AdoptionApplication";
-import User from "@/models/User";
+import Adoption, { IAdoption } from "@/models/Adoption";
+// import AdoptionApplication from "@/models/AdoptionApplication";
+// import User from "@/models/User";
 import { verifyToken } from "@/utils/auth";
 
 export default async function handler(
@@ -26,6 +26,7 @@ export default async function handler(
           .json({ message: `Method ${method} Not Allowed` });
     }
   } catch (error) {
+    console.error("Adoption handler error:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -43,8 +44,6 @@ async function getAdoptions(req: NextApiRequest, res: NextApiResponse) {
       adoptionType,
       petType,
       search,
-      minAge,
-      maxAge,
     } = req.query;
 
     const pageNum = parseInt(page as string);
@@ -52,16 +51,16 @@ async function getAdoptions(req: NextApiRequest, res: NextApiResponse) {
     const skip = (pageNum - 1) * limitNum;
 
     // Build filter object
-    const filter: any = {};
+    const filter: import("mongoose").FilterQuery<IAdoption> = {};
 
     if (status) filter.status = status;
     if (adoptionType) filter.adoptionType = adoptionType;
     if (petType) filter.petType = petType;
 
     if (search) {
-      filter.$or = [
-        { description: { $regex: search, $options: "i" } },
-        { petBreed: { $regex: search, $options: "i" } },
+      (filter as unknown as Record<string, unknown>).$or = [
+        { description: { $regex: search as string, $options: "i" } },
+        { petBreed: { $regex: search as string, $options: "i" } },
       ];
     }
 
@@ -90,6 +89,7 @@ async function getAdoptions(req: NextApiRequest, res: NextApiResponse) {
       },
     });
   } catch (error) {
+    console.error("Error fetching adoptions:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -106,10 +106,16 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
       return res.status(401).json({ message: "Authentication required" });
     }
 
-    const decoded = await verifyToken(token);
-    if (!decoded) {
+    const decodedRaw = await verifyToken(token);
+    if (
+      !decodedRaw ||
+      typeof decodedRaw !== "object" ||
+      !("id" in decodedRaw) ||
+      typeof (decodedRaw as Record<string, unknown>).id !== "string"
+    ) {
       return res.status(401).json({ message: "Invalid token" });
     }
+    const userId = (decodedRaw as { id: string }).id;
 
     const {
       petType,
@@ -162,7 +168,7 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
         otherPets: false,
       },
       requirements: requirements || [],
-      userId: decoded.id,
+      userId,
       status: "available",
     });
 
@@ -177,6 +183,7 @@ async function createAdoption(req: NextApiRequest, res: NextApiResponse) {
       data: adoption,
     });
   } catch (error) {
+    console.error("Error creating adoption:", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",

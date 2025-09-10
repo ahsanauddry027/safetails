@@ -130,8 +130,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return { success: false, error: "Invalid response format" };
     } catch (error: unknown) {
+      const axiosError = error as {
+        response?: { data?: { message?: string; error?: string } };
+        message?: string;
+      };
       const errorMessage =
-        error instanceof Error ? error.message : "Login failed";
+        axiosError?.response?.data?.message ||
+        axiosError?.response?.data?.error ||
+        axiosError?.message ||
+        "Login failed";
       return { success: false, error: errorMessage };
     }
   };
@@ -139,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       await axios.post("/api/auth/logout");
-    } catch (error) {
+    } catch {
       // Continue with logout even if API call fails
     } finally {
       setUser(null);
@@ -167,7 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
         setUser(userData);
       }
-    } catch (error) {
+    } catch {
       throw new Error("Failed to update profile");
     }
   };
@@ -175,7 +182,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const deleteProfile = async () => {
     try {
       await axios.delete("/api/profile/delete");
-    } catch (error) {
+    } catch {
       // Continue with deletion even if API call fails
     } finally {
       setUser(null);

@@ -1,5 +1,5 @@
 // components/AdminManagement.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 interface Admin {
@@ -32,17 +32,10 @@ const AdminManagement = ({
   const [loading, setLoading] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchAdmins();
-    }
-  }, [isOpen]);
-
-  const fetchAdmins = async () => {
+  const fetchAdmins = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get("/api/admin/users", {
@@ -50,12 +43,18 @@ const AdminManagement = ({
       });
       const adminUsers = response.data.users.admins || [];
       setAdmins(adminUsers);
-    } catch (error) {
+    } catch {
       onError("Failed to fetch admin users");
     } finally {
       setLoading(false);
     }
-  };
+  }, [onError]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchAdmins();
+    }
+  }, [isOpen, fetchAdmins]);
 
   const handleEditAdmin = async (adminData: Partial<Admin>) => {
     if (!selectedAdmin?.id) return;
@@ -74,26 +73,8 @@ const AdminManagement = ({
       setShowEditModal(false);
       setSelectedAdmin(null);
       fetchAdmins();
-    } catch (error) {
+    } catch {
       onError("Failed to update admin user");
-    }
-  };
-
-  const handleDeleteAdmin = async () => {
-    if (!selectedAdmin?.id) return;
-
-    try {
-      await axios.delete("/api/admin/delete-user", {
-        data: { userId: selectedAdmin.id },
-        withCredentials: true,
-      });
-
-      onSuccess("Admin deleted successfully");
-      setShowDeleteModal(false);
-      setSelectedAdmin(null);
-      fetchAdmins();
-    } catch (error) {
-      onError("Failed to delete admin user");
     }
   };
 
@@ -110,7 +91,7 @@ const AdminManagement = ({
 
       onSuccess(`Admin ${isActive ? "deactivated" : "activated"} successfully`);
       fetchAdmins();
-    } catch (error) {
+    } catch {
       onError("Failed to update admin status");
     }
   };
@@ -276,15 +257,6 @@ const AdminManagement = ({
                           >
                             {admin.isActive ? "Deactivate" : "Activate"}
                           </button>
-                          <button
-                            onClick={() => {
-                              setSelectedAdmin(admin);
-                              setShowDeleteModal(true);
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors duration-200"
-                          >
-                            Delete
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -409,40 +381,6 @@ const AdminManagement = ({
                   className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors duration-200"
                 >
                   Update
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedAdmin && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border-2 border-black w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-black mb-4">
-                Delete Admin User
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Are you sure you want to delete {selectedAdmin.name}? This
-                action cannot be undone.
-              </p>
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setSelectedAdmin(null);
-                  }}
-                  className="px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeleteAdmin}
-                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors duration-200"
-                >
-                  Delete
                 </button>
               </div>
             </div>

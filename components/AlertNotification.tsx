@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 
@@ -213,12 +214,12 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
           </div>
 
           <div className="p-4 border-t border-gray-200">
-            <a
+            <Link
               href="/alerts"
               className="block text-center text-sm text-indigo-600 hover:text-indigo-800 font-medium"
             >
               View all alerts →
-            </a>
+            </Link>
           </div>
         </div>
       )}
